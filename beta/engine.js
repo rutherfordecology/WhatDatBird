@@ -1,11 +1,12 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.95';
+const APP_VERSION = 'v5.96';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
 let CFG = {};
+let _inLibrary = null; // null=unchecked, true=in library, false=not in library
 let _swipeX = 0;
 
 // ── Constants ─────────────────────────────────────────────────────────────
@@ -644,8 +645,10 @@ function renderIntro(app, header) {
     <button class="btn-secondary" onclick="setState({phase:'species'})">&#128203; Species List</button>
     <button class="btn-secondary" onclick="toggleIntroLeaderboard()">&#127942; Leaderboards</button>
     <div id="introLbPanel" style="display:none;margin-top:12px"></div>
+    ${saveSectionHtml()}
     <button class="btn-back" onclick="setState({phase:'about'})">&#8505; About WhatDatBird?</button>
     <button class="btn-back" onclick="window.location.href='${CFG.backUrl}'">&#8592; All Quizzes</button>`;
+  if ((CFG.placeId || CFG.coordLat) && _inLibrary === null) checkInLibrary();
 }
 
 function renderCelebrate(app, header) {
@@ -684,22 +687,7 @@ function renderResult(app, header) {
   ].find(m=>m!==null);
 
   const canSave = CFG.placeId || CFG.coordLat;
-  const defaultQuizName = CFG.placeName;
-  const saveBtn = canSave ? `
-    <div id="saveLibSection">
-      <button class="btn-save-library" id="saveLibBtn" onclick="showRenameForm()">&#127757; Add to Quiz Library</button>
-      <div id="saveLibRename" style="display:none;margin-top:10px;">
-        <div style="font-size:0.8rem;color:#6b6960;margin-bottom:6px;text-align:center;">Name this quiz in the library:</div>
-        <div style="display:flex;gap:8px;max-width:380px;margin:0 auto;">
-          <input id="saveLibName" type="text" maxlength="60" value="${defaultQuizName.replace(/"/g,'&quot;')}"
-            style="flex:1;padding:8px 12px;font-size:0.88rem;border:1.5px solid #dddbd3;border-radius:8px;outline:none;font-family:inherit;"
-            onfocus="this.style.borderColor='#2a7a58'" onblur="this.style.borderColor='#dddbd3'">
-          <button onclick="saveToLibrary()" style="padding:8px 16px;background:#1a5940;color:#fff;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-family:inherit;font-size:0.88rem;">Save</button>
-          <button onclick="hideRenameForm()" style="padding:8px 12px;background:none;border:1.5px solid #dddbd3;border-radius:8px;cursor:pointer;font-family:inherit;font-size:0.88rem;color:#6b6960;">✕</button>
-        </div>
-      </div>
-      <div id="saveLibMsg" style="font-size:0.8rem;color:#2a7a58;margin-top:8px;min-height:1.2em;text-align:center;font-weight:700;"></div>
-    </div>` : '';
+  const saveBtn = saveSectionHtml();
 
   const lbSection = canSave ? `
     <div class="lb-entry" id="lbEntry">
@@ -730,8 +718,33 @@ function renderResult(app, header) {
   launchConfetti();
   if (CFG.placeId || CFG.coordLat) {
     loadLeaderboard();
-    checkInLibrary();
+    if (_inLibrary === null) {
+      checkInLibrary();
+    } else if (_inLibrary === true) {
+      unlockLeaderboard();
+    }
   }
+}
+
+function saveSectionHtml() {
+  if (!(CFG.placeId || CFG.coordLat)) return '';
+  const name = CFG.placeName.replace(/"/g, '&quot;');
+  const show = _inLibrary === false ? '' : 'none';
+  return `
+    <div id="saveLibSection">
+      <button class="btn-save-library" id="saveLibBtn" onclick="showRenameForm()" style="display:${show};">&#127757; Add to Quiz Library</button>
+      <div id="saveLibRename" style="display:none;margin-top:10px;">
+        <div style="font-size:0.8rem;color:#6b6960;margin-bottom:6px;text-align:center;">Name this quiz in the library:</div>
+        <div style="display:flex;gap:8px;max-width:380px;margin:0 auto;">
+          <input id="saveLibName" type="text" maxlength="60" value="${name}"
+            style="flex:1;padding:8px 12px;font-size:0.88rem;border:1.5px solid #dddbd3;border-radius:8px;outline:none;font-family:inherit;"
+            onfocus="this.style.borderColor='#2a7a58'" onblur="this.style.borderColor='#dddbd3'">
+          <button onclick="saveToLibrary()" style="padding:8px 16px;background:#1a5940;color:#fff;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-family:inherit;font-size:0.88rem;">Save</button>
+          <button onclick="hideRenameForm()" style="padding:8px 12px;background:none;border:1.5px solid #dddbd3;border-radius:8px;cursor:pointer;font-family:inherit;font-size:0.88rem;color:#6b6960;">✕</button>
+        </div>
+      </div>
+      <div id="saveLibMsg" style="font-size:0.8rem;color:#2a7a58;margin-top:8px;min-height:1.2em;text-align:center;font-weight:700;"></div>
+    </div>`;
 }
 
 function showRenameForm() {
@@ -764,11 +777,12 @@ async function checkInLibrary() {
       ? data.quizzes.some(q => String(q.place_id) === String(CFG.placeId))
       : data.quizzes.some(q => q.coord_lat && Math.abs(q.coord_lat - CFG.coordLat) < 0.001 && Math.abs(q.coord_lng - CFG.coordLng) < 0.001);
     if (alreadyIn) {
-      const btn = document.getElementById('saveLibBtn');
-      const msg = document.getElementById('saveLibMsg');
-      if (btn) btn.style.display = 'none';
-      if (msg) msg.style.display = 'none';
+      _inLibrary = true;
       unlockLeaderboard();
+    } else {
+      _inLibrary = false;
+      const btn = document.getElementById('saveLibBtn');
+      if (btn) btn.style.display = '';
     }
   } catch {}
 }
@@ -1530,6 +1544,7 @@ function initEngine(config) {
   CFG = config;
   CFG.indigenousField = config.indigenousField || 'indigenousName';
   CFG.easyUseWiki = config.easyUseWiki || false;
+  _inLibrary = null;
 
   // Compute tiers if not provided
   if (!CFG.easyBirds) CFG.easyBirds = [];
