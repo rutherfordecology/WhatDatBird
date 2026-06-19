@@ -1088,6 +1088,8 @@ function renderAbout(app, header) {
 
 // ── Actions ───────────────────────────────────────────────────────────────
 function adjustImgPosition(img) {
+  // On narrow phones the CSS fixes the box height, so skip inline height overrides
+  if (window.innerWidth <= 500) return;
   const isPortrait = img.naturalWidth < img.naturalHeight;
   if(isPortrait) {
     const fullH = img.offsetWidth/(img.naturalWidth/img.naturalHeight);
