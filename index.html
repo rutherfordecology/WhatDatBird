@@ -50,13 +50,9 @@
   .hero h1 { font-size: 2.6rem; font-weight: 900; color: #1a5940; margin-bottom: 10px; line-height: 1.1; }
   .hero p { font-size: 0.95rem; color: #6b6960; line-height: 1.6; max-width: 400px; margin: 0 auto; }
 
-.lib-map-toggle { display:inline-block; margin:0 auto 16px; padding:9px 18px; background:#fff; border:1.5px solid #dddbd3; color:#1a5940; border-radius:10px; font-weight:800; font-size:0.78rem; cursor:pointer; font-family:inherit; transition:all 0.15s; }
-.lib-map-toggle:hover { border-color:#2a7a58; background:#e8f4ef; }
-.lib-map { display:none; max-width:900px; height:380px; margin:0 auto 28px; border-radius:14px; overflow:hidden; border:1px solid #dddbd3; }
-.lib-map.open { display:block; }
-.lib-map-popup { font-family:system-ui,-apple-system,sans-serif; text-align:center; }
-.lib-map-popup a { color:#1a5940; font-weight:800; text-decoration:none; }
-.lib-map-popup a:hover { text-decoration:underline; }
+.map-section { max-width:900px; margin:0 auto 32px; padding:0 20px; }
+.map-hint { text-align:center; font-size:0.85rem; color:#6b6960; margin-bottom:10px; line-height:1.5; }
+.map-hint strong { color:#1a5940; }
 .section-label {
     max-width: 1400px; margin: 0 auto 14px; padding: 0 20px;
     font-size: 0.68rem; font-weight: 800; letter-spacing: 0.12em;
@@ -108,25 +104,16 @@
   footer a { color: #2a7a58; text-decoration: none; }
   footer a:hover { text-decoration: underline; }
 
-  .pick-btn { display:block; max-width:480px; margin:0 auto 0; padding:15px 24px; background:#1a5940; border:none; color:#fff; border-radius:14px; font-size:1.05rem; font-weight:800; cursor:pointer; font-family:system-ui,-apple-system,sans-serif; transition:all 0.15s; text-align:center; width:calc(100% - 40px); box-shadow:0 4px 16px rgba(26,89,64,0.25); letter-spacing:0.01em; }
-  .pick-btn:hover { background:#226b4d; box-shadow:0 6px 20px rgba(26,89,64,0.35); transform:translateY(-1px); }
-
-  .map-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:1000; align-items:center; justify-content:center; padding:20px; }
-  .map-modal.open { display:flex; }
-  .map-box { background:#fff; border-radius:16px; width:100%; max-width:700px; overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,0.25); display:flex; flex-direction:column; max-height:90vh; }
-  .map-header { padding:14px 18px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #dddbd3; flex-shrink:0; }
-  .map-header h2 { font-size:1rem; font-weight:800; color:#1a5940; }
-  .map-close { background:none; border:none; font-size:1.4rem; cursor:pointer; color:#9b9890; line-height:1; padding:0 4px; }
-  .map-close:hover { color:#1c1b18; }
-  .map-search-row { padding:8px 12px; border-bottom:1px solid #dddbd3; display:flex; gap:6px; flex-shrink:0; }
-  .map-search-row input { flex:1; padding:7px 11px; border:1px solid #ccc; border-radius:8px; font-size:0.88rem; font-family:inherit; outline:none; }
+  .map-search-row { display:flex; gap:6px; margin-bottom:8px; }
+  .map-search-row input { flex:1; padding:8px 12px; border:1.5px solid #dddbd3; border-radius:8px; font-size:0.88rem; font-family:inherit; outline:none; }
   .map-search-row input:focus { border-color:#1a5940; }
-  .map-search-row button { padding:7px 13px; background:#1a5940; color:#fff; border:none; border-radius:8px; font-size:0.85rem; font-weight:700; cursor:pointer; white-space:nowrap; }
+  .map-search-row button { padding:8px 14px; background:#1a5940; color:#fff; border:none; border-radius:8px; font-size:0.85rem; font-weight:700; cursor:pointer; white-space:nowrap; font-family:inherit; }
   .map-search-row button:hover { background:#226b4d; }
-#pickMap { flex:1; min-height:280px; }
-  .map-status { padding:10px 18px; font-size:0.85rem; color:#6b6960; border-top:1px solid #dddbd3; flex-shrink:0; min-height:44px; display:flex; align-items:center; }
+  #mainMap { height:420px; border-radius:14px; overflow:hidden; border:1.5px solid #dddbd3; }
+  .map-status { padding:8px 4px; font-size:0.85rem; color:#6b6960; min-height:38px; display:flex; align-items:center; }
   .map-status strong { color:#1a5940; }
-  .map-places { border-top:1px solid #dddbd3; flex-shrink:0; overflow-y:auto; max-height:200px; }
+  .map-places { border:1.5px solid #dddbd3; border-radius:10px; overflow:hidden; }
+  .map-places:empty { display:none; }
   .map-place-item { padding:11px 18px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #f3f2ee; transition:background 0.1s; }
   .map-place-item:last-child { border-bottom:none; }
   .map-place-item:hover, .map-place-item.active { background:#e8f4ef; }
@@ -157,32 +144,16 @@
   <p>Test your bird ID skills. Pick any location in the world.</p>
 </div>
 
-<div style="max-width:480px;margin:0 auto 44px;padding:0 20px;">
-  <button class="pick-btn" onclick="openMapPicker()">&#127758; Choose a location to play</button>
-</div>
-
-<div class="map-modal" id="mapModal">
-  <div class="map-box">
-    <div class="map-header">
-      <h2>&#127758; Choose a location</h2>
-      <button class="map-close" onclick="closeMapPicker()">&#x2715;</button>
-    </div>
-    <div id="pickMap"></div>
-    <div class="map-search-row">
-      <input id="modalSearchInput" type="text" placeholder="Search for a place, park, or reserve…" onkeydown="if(event.key==='Enter')searchMapLocation()">
-      <button onclick="searchMapLocation()">Search</button>
-    </div>
-    <div class="map-status" id="mapStatus">
-      <span id="mapStatusText">Click anywhere on the map to find a location.</span>
-    </div>
-    <div class="map-places" id="mapPlaces"></div>
+<div class="map-section">
+  <p class="map-hint">Click a <strong>quiz marker</strong> to play an existing quiz — or <strong>click anywhere</strong> on the map to create a new one</p>
+  <div class="map-search-row">
+    <input id="mapSearchInput" type="text" placeholder="Search for a place, park, or reserve…" onkeydown="if(event.key==='Enter')searchMapLocation()">
+    <button onclick="searchMapLocation()">Search</button>
   </div>
+  <div id="mainMap"></div>
+  <div class="map-status" id="mapStatus"><span id="mapStatusText"></span></div>
+  <div class="map-places" id="mapPlaces"></div>
 </div>
-
-<div style="text-align:center;">
-  <button class="lib-map-toggle" id="libMapToggle" onclick="toggleLibraryMap()" style="display:none;">&#128506; View quiz map</button>
-</div>
-<div id="libraryMap" class="lib-map"></div>
 
 <div id="adminChartWrap" style="display:none;">
   <div class="admin-chart">
@@ -214,7 +185,6 @@ const ADMIN_MODE = new URLSearchParams(window.location.search).get('admin') === 
 const GH_TOKEN = ['github','pat','11CD5YDQQ0BqwCXNYdVbgz_5iHfac6fd0MNVZZLhiPrnFnFTzcTj8N7l1MQ7ro9gn6CNE4N7VHlt7DOCis'].join('_');
 const GH_REPO  = 'rutherfordecology/WhatDatBird';
 const GH_FILE  = 'quizzes.json';
-let _libraryMap = null;
 
 function quizCoords(q) {
   // Return {lat, lng} from whichever field is present, or null
@@ -239,36 +209,6 @@ async function resolveQuizCoords(q) {
   } catch { return null; }
 }
 
-async function toggleLibraryMap() {
-  const box = document.getElementById('libraryMap');
-  const open = box.classList.toggle('open');
-  document.getElementById('libMapToggle').textContent = open ? '✕ Hide quiz map' : '🗺️ View quiz map';
-  if (open) {
-    if (!_libraryMap) {
-      _libraryMap = L.map('libraryMap');
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 18
-      }).addTo(_libraryMap);
-      _libraryMap.setView([20, 0], 2);
-      setTimeout(() => _libraryMap.invalidateSize(), 80);
-      // Resolve all quiz coords (instant for stored coords, async for place_id lookups)
-      const coordPromises = _libraryQuizzes.map(q => resolveQuizCoords(q).then(c => ({ q, c })));
-      const pts = [];
-      for (const p of coordPromises) {
-        const { q, c } = await p;
-        if (!c) continue;
-        pts.push([c.lat, c.lng]);
-        L.marker([c.lat, c.lng]).addTo(_libraryMap)
-          .bindPopup(`<div class="lib-map-popup"><div>${q.description || q.name}</div><a href="${q.url}">Play this quiz &#8594;</a></div>`);
-      }
-      if (pts.length > 1) _libraryMap.fitBounds(pts, { padding: [30, 30], maxZoom: 6 });
-      else if (pts.length === 1) _libraryMap.setView(pts[0], 8);
-    } else {
-      setTimeout(() => _libraryMap.invalidateSize(), 80);
-    }
-  }
-}
 
 async function loadLibrary() {
   try {
@@ -334,8 +274,7 @@ async function loadLibrary() {
     lib.innerHTML = html;
 
     _libraryQuizzes = quizzes;
-    const mapToggle = document.getElementById('libMapToggle');
-    if (mapToggle && quizzes.length) mapToggle.style.display = 'inline-block';
+    addQuizMarkers(quizzes);
 
     function cardHtml(q) {
       const count = q.species ? `<span class="card-count">${q.species} species</span>` : '';
@@ -594,21 +533,34 @@ const TYPE_LABEL = {
   12:'Region', 14:'Island', 17:'Marine Reserve',
 };
 
-function openMapPicker() {
-  document.getElementById('mapModal').classList.add('open');
-  if (!pickMap) {
-    pickMap = L.map('pickMap').setView([20, 0], 2);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxZoom: 18
-    }).addTo(pickMap);
-    pickMap.on('click', onMapClick);
+// Initialise the combined map immediately on page load
+pickMap = L.map('mainMap').setView([20, 0], 2);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+  maxZoom: 18
+}).addTo(pickMap);
+pickMap.on('click', onMapClick);
+
+const quizIcon = L.divIcon({
+  className: '',
+  html: '<div style="width:12px;height:12px;background:#1a5940;border:2.5px solid #fff;border-radius:50%;box-shadow:0 1px 5px rgba(0,0,0,0.35)"></div>',
+  iconSize: [12, 12], iconAnchor: [6, 6], popupAnchor: [0, -10],
+});
+
+async function addQuizMarkers(quizzes) {
+  const coordPromises = quizzes.map(q => resolveQuizCoords(q).then(c => ({ q, c })));
+  for (const p of coordPromises) {
+    const { q, c } = await p;
+    if (!c) continue;
+    const label = q.description || q.name.replace('WhatDatBird? - ', '');
+    L.marker([c.lat, c.lng], { icon: quizIcon })
+      .addTo(pickMap)
+      .bindPopup(`<div style="font-family:system-ui,-apple-system,sans-serif;text-align:center;min-width:130px"><strong style="color:#1a5940;display:block;margin-bottom:6px">${label}</strong><a href="${q.url}" style="color:#1a5940;font-weight:800;text-decoration:none">Play this quiz &#8594;</a></div>`);
   }
-  setTimeout(() => pickMap.invalidateSize(), 80);
 }
 
 async function searchMapLocation() {
-  const q = document.getElementById('modalSearchInput').value.trim();
+  const q = document.getElementById('mapSearchInput').value.trim();
   if (!q) return;
   statusText.textContent = 'Searching…';
   placesEl.innerHTML = '';
@@ -677,16 +629,7 @@ function goBbox() {
   const { s, n, w, e, name, cc } = _pendingBbox;
   let url = `quiz.html?swlat=${s}&nelat=${n}&swlng=${w}&nelng=${e}&place_name=${encodeURIComponent(name)}`;
   if (cc) url += `&country_code=${cc}`;
-  closeMapPicker();
   window.location.href = url;
-}
-
-function closeMapPicker() {
-  document.getElementById('mapModal').classList.remove('open');
-  document.getElementById('mapPlaces').innerHTML = '';
-  document.getElementById('mapStatusText').textContent = 'Click anywhere on the map to find a location.';
-  document.getElementById('modalSearchInput').value = '';
-  clearBoundary();
 }
 
 function clearBoundary() {
@@ -839,7 +782,7 @@ async function onMapClick(e) {
   }
 }
 </script>
-<script src="engine.js?v=6.00"></script>
+<script src="engine.js?v=6.01"></script>
 <script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'v5.99';</script>
 </body>
 </html>
