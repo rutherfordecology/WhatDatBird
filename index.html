@@ -255,9 +255,32 @@ async function toggleLibraryMap() {
 
 async function loadLibrary() {
   try {
-    const r = await fetch(`quizzes.json?_=${Date.now()}`);
+    const [r, lbR] = await Promise.all([
+      fetch(`quizzes.json?_=${Date.now()}`),
+      ADMIN_MODE ? fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE.replace('quizzes','leaderboard')}`, { headers: { Authorization: `token ${GH_TOKEN}`, Accept: 'application/vnd.github.v3+json' } }) : Promise.resolve(null),
+    ]);
     const d = await r.json();
     const quizzes = d.quizzes || [];
+
+    // Build play count map keyed by quiz URL prefix (place_id or coord)
+    let playsByUrl = {};
+    if (ADMIN_MODE && lbR?.ok) {
+      try {
+        const lbD = await lbR.json();
+        const lb = JSON.parse(decodeURIComponent(escape(atob(lbD.content.replace(/\n/g,'')))).replace(/^﻿/,''));
+        if (lb.plays) {
+          // Sum plays across all modes for each quiz
+          for (const [key, count] of Object.entries(lb.plays)) {
+            // key is like "12345_easy" or "coord_-38.021_177.099_easy"
+            const base = key.replace(/_(?:easy|hard|complete|rarity)$/, '');
+            playsByUrl[base] = (playsByUrl[base] || 0) + count;
+          }
+        }
+      } catch {}
+      const total = Object.values(playsByUrl).reduce((a,b) => a+b, 0);
+      const bar = document.getElementById('adminBar');
+      if (bar) bar.textContent = `⚠ ADMIN MODE — ${total} total plays across ${quizzes.length} quizzes`;
+    }
 
     const groups = {};
     for (const q of quizzes) {
@@ -305,8 +328,11 @@ async function loadLibrary() {
       const absUrl = q.url.startsWith('http') ? q.url : `https://rutherfordecology.github.io/WhatDatBird/${q.url}`;
       const safeUrl = q.url.replace(/'/g,"\\'");
       const safeName = q.name.replace(/'/g,"\\'");
+      const playsKey = q.place_id ? String(q.place_id) : `coord_${(q.coord_lat||q.lat||0).toFixed(3)}_${(q.coord_lng||q.lng||0).toFixed(3)}`;
+      const plays = playsByUrl[playsKey] || 0;
       const adminBtns = ADMIN_MODE ? `
         <div class="admin-btns" onclick="event.preventDefault();event.stopPropagation();">
+          <span style="font-size:0.72rem;color:#6b6960;align-self:center;">&#127918; ${plays} play${plays!==1?'s':''}</span>
           <button class="admin-btn admin-rename" onclick="adminRename('${safeUrl}')" title="Rename">&#9998;</button>
           <button class="admin-btn admin-delete" onclick="adminDelete('${safeUrl}')" title="Delete">&#x1F5D1;</button>
         </div>` : '';
@@ -387,6 +413,7 @@ function showShareToast(msg) {
 // ── Admin mode ────────────────────────────────────────────────────────────
 if (ADMIN_MODE) {
   const bar = document.createElement('div');
+  bar.id = 'adminBar';
   bar.className = 'admin-bar';
   bar.textContent = '⚠ ADMIN MODE — edits go live immediately';
   document.body.insertBefore(bar, document.body.firstChild);
