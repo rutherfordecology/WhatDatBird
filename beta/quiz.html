@@ -137,8 +137,13 @@ async function processBatch(speciesItems) {
   return (await Promise.all(speciesItems.map(async ({key, count}) => {
     try {
       // 1. GBIF species: Latin name + real taxonomy keys
-      const gr = await fetch(`https://api.gbif.org/v1/species/${key}`);
-      const gd = await gr.json();
+      let gr = await fetch(`https://api.gbif.org/v1/species/${key}`);
+      let gd = await gr.json();
+      // Follow synonym → accepted taxon (e.g. Hen Harrier → Northern Harrier for NA records)
+      if (gd.taxonomicStatus === 'SYNONYM' && gd.acceptedKey && gd.acceptedKey !== key) {
+        gr = await fetch(`https://api.gbif.org/v1/species/${gd.acceptedKey}`);
+        gd = await gr.json();
+      }
       if (gd.rank !== 'SPECIES' || gd.class !== 'Aves') return null;
       const latin = gd.canonicalName;
       if (!latin) return null;
