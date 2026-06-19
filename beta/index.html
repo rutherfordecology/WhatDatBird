@@ -624,15 +624,21 @@ async function onMapClick(e) {
       ...(nearbyD.results?.standard || []),
       ...(nearbyD.results?.community || []).filter(p => PARK_TYPES.has(p.place_type)),
     ];
-    const adminPlaces = candidates
+    const allFiltered = candidates
       .filter(p => {
         if (!ADMIN_TYPES.has(p.place_type) || p.place_type === 1) return false;
         if (seen.has(p.id)) return false;
         seen.add(p.id);
         return true;
       })
-      .sort((a, b) => (PRIORITY[a.place_type] ?? 99) - (PRIORITY[b.place_type] ?? 99))
-      .slice(0, 8);
+      .sort((a, b) => (PRIORITY[a.place_type] ?? 99) - (PRIORITY[b.place_type] ?? 99));
+
+    // Always include county (4) and state (3) if present; fill remaining slots with smaller places
+    const GUARANTEED_TYPES = new Set([3, 4]);
+    const guaranteed = allFiltered.filter(p => GUARANTEED_TYPES.has(p.place_type));
+    const others = allFiltered.filter(p => !GUARANTEED_TYPES.has(p.place_type)).slice(0, 6);
+    const adminPlaces = [...others, ...guaranteed]
+      .sort((a, b) => (PRIORITY[a.place_type] ?? 99) - (PRIORITY[b.place_type] ?? 99));
 
     statusText.textContent = 'Hover a location to preview its area, then click to play:';
 
@@ -651,6 +657,6 @@ async function onMapClick(e) {
 }
 </script>
 <script src="engine.js?v=6.07"></script>
-<script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'v6.11';</script>
+<script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'v6.12';</script>
 </body>
 </html>
