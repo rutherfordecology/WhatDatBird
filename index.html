@@ -95,6 +95,11 @@
   .admin-delete { background:#fdeaea; color:#8a2c2c; }
   .admin-delete:hover { background:#f5c6c6; }
   .admin-bar { background:#8a2c2c; color:#fff; text-align:center; padding:8px; font-size:0.8rem; font-weight:700; letter-spacing:0.05em; }
+  .admin-chart { background:#fff; border:1.5px solid #dddbd3; border-radius:12px; padding:16px 20px; max-width:900px; margin:16px auto; }
+  .admin-chart-title { font-size:0.75rem; font-weight:800; color:#6b6960; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; }
+  .admin-chart-toggle { display:flex; gap:4px; }
+  .admin-chart-toggle button { padding:3px 10px; border:1.5px solid #dddbd3; border-radius:6px; font-size:0.72rem; font-weight:700; cursor:pointer; background:#fff; color:#6b6960; font-family:inherit; }
+  .admin-chart-toggle button.active { background:#1a5940; color:#fff; border-color:#1a5940; }
 
   footer {
     text-align: center; padding: 20px 20px 40px;
@@ -179,6 +184,18 @@
 </div>
 <div id="libraryMap" class="lib-map"></div>
 
+<div id="adminChartWrap" style="display:none;">
+  <div class="admin-chart">
+    <div class="admin-chart-title">
+      <span>Plays over time</span>
+      <div class="admin-chart-toggle">
+        <button id="chartBtnDay" class="active" onclick="setChartView('day')">Daily</button>
+        <button id="chartBtnWeek" onclick="setChartView('week')">Weekly</button>
+      </div>
+    </div>
+    <div id="adminChart"></div>
+  </div>
+</div>
 <div id="quizLibrary"><div class="section-label" style="max-width:640px;margin:0 auto 14px;padding:0 20px;">Loading quiz library...</div></div>
 
 <footer>
@@ -269,13 +286,12 @@ async function loadLibrary() {
         const lbD = await lbR.json();
         const lb = JSON.parse(decodeURIComponent(escape(atob(lbD.content.replace(/\n/g,'')))).replace(/^﻿/,''));
         if (lb.plays) {
-          // Sum plays across all modes for each quiz
           for (const [key, count] of Object.entries(lb.plays)) {
-            // key is like "12345_easy" or "coord_-38.021_177.099_easy"
             const base = key.replace(/_(?:easy|hard|complete|rarity)$/, '');
             playsByUrl[base] = (playsByUrl[base] || 0) + count;
           }
         }
+        if (lb.play_dates) renderPlaysChart(lb.play_dates);
       } catch {}
       const total = Object.values(playsByUrl).reduce((a,b) => a+b, 0);
       const bar = document.getElementById('adminBar');
@@ -408,6 +424,88 @@ function showShareToast(msg) {
   t.textContent = msg; t.style.opacity = '1';
   clearTimeout(_shareToastTimer);
   _shareToastTimer = setTimeout(() => { t.style.opacity = '0'; }, 2200);
+}
+
+// ── Plays chart ───────────────────────────────────────────────────────────
+let _playDates = {};
+let _chartView = 'day';
+
+function setChartView(v) {
+  _chartView = v;
+  document.getElementById('chartBtnDay').classList.toggle('active', v === 'day');
+  document.getElementById('chartBtnWeek').classList.toggle('active', v === 'week');
+  drawChart();
+}
+
+function renderPlaysChart(play_dates) {
+  _playDates = play_dates;
+  document.getElementById('adminChartWrap').style.display = '';
+  drawChart();
+}
+
+function drawChart() {
+  const el = document.getElementById('adminChart');
+  if (!el) return;
+
+  let buckets;
+  if (_chartView === 'day') {
+    // Last 60 days
+    const days = 60;
+    buckets = [];
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const key = d.toISOString().split('T')[0];
+      buckets.push({ label: key.slice(5), value: _playDates[key] || 0 });
+    }
+  } else {
+    // Last 26 weeks
+    const weeks = 26;
+    const weekMap = {};
+    for (const [date, count] of Object.entries(_playDates)) {
+      const d = new Date(date);
+      const day = d.getDay();
+      const monday = new Date(d); monday.setDate(d.getDate() - ((day + 6) % 7));
+      const wk = monday.toISOString().split('T')[0];
+      weekMap[wk] = (weekMap[wk] || 0) + count;
+    }
+    buckets = [];
+    for (let i = weeks - 1; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i * 7);
+      const day = d.getDay();
+      const monday = new Date(d); monday.setDate(d.getDate() - ((day + 6) % 7));
+      const wk = monday.toISOString().split('T')[0];
+      buckets.push({ label: wk.slice(5), value: weekMap[wk] || 0 });
+    }
+  }
+
+  const max = Math.max(...buckets.map(b => b.value), 1);
+  const W = el.offsetWidth || 800, H = 140, pad = 28, barGap = 2;
+  const barW = Math.max(2, (W - pad) / buckets.length - barGap);
+
+  const bars = buckets.map((b, i) => {
+    const x = pad + i * (barW + barGap);
+    const bh = Math.round((b.value / max) * (H - 24));
+    const y = H - bh - 16;
+    const col = b.value ? '#2a7a58' : '#e8ede8';
+    const tip = `${b.label}: ${b.value} play${b.value !== 1 ? 's' : ''}`;
+    return `<rect x="${x.toFixed(1)}" y="${y}" width="${barW.toFixed(1)}" height="${bh}" fill="${col}" rx="2"><title>${tip}</title></rect>
+      ${b.value ? `<text x="${(x + barW/2).toFixed(1)}" y="${y - 2}" text-anchor="middle" font-size="8" fill="#2a7a58">${b.value}</text>` : ''}`;
+  }).join('');
+
+  // X-axis labels: show every Nth label to avoid crowding
+  const nth = _chartView === 'day' ? Math.ceil(buckets.length / 10) : Math.ceil(buckets.length / 8);
+  const labels = buckets.map((b, i) => {
+    if (i % nth !== 0) return '';
+    const x = pad + i * (barW + barGap) + barW / 2;
+    return `<text x="${x.toFixed(1)}" y="${H - 2}" text-anchor="middle" font-size="8" fill="#9b9890">${b.label}</text>`;
+  }).join('');
+
+  el.innerHTML = `<svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" style="overflow:visible">
+    <line x1="${pad}" y1="0" x2="${pad}" y2="${H - 14}" stroke="#dddbd3" stroke-width="1"/>
+    <text x="${pad - 3}" y="8" text-anchor="end" font-size="8" fill="#9b9890">${max}</text>
+    <text x="${pad - 3}" y="${(H - 14) / 2}" text-anchor="end" font-size="8" fill="#9b9890">${Math.round(max / 2)}</text>
+    ${bars}${labels}
+  </svg>`;
 }
 
 // ── Admin mode ────────────────────────────────────────────────────────────

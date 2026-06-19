@@ -1301,11 +1301,14 @@ async function submitScore() {
 
   try {
     const { sha, data } = await readLB();
-    if (!data.boards) data.boards = {};
-    if (!data.plays)  data.plays  = {};
+    if (!data.boards)     data.boards     = {};
+    if (!data.plays)      data.plays      = {};
+    if (!data.play_dates) data.play_dates = {};
     const key = CFG.placeId ? `${CFG.placeId}_${state.mode}` : `coord_${CFG.coordLat.toFixed(3)}_${CFG.coordLng.toFixed(3)}_${state.mode}`;
     if (!data.boards[key]) data.boards[key] = [];
     data.plays[key] = (data.plays[key] || 0) + 1;
+    const today = new Date().toISOString().split('T')[0];
+    data.play_dates[today] = (data.play_dates[today] || 0) + 1;
     data.boards[key].push({ name, score: state.totalSeen, pts: state.totalCorrect, date: new Date().toISOString().split('T')[0] });
     data.boards[key].sort((a, b) => (b.pts ?? 0) - (a.pts ?? 0) || (a.score ?? 0) - (b.score ?? 0));
     data.boards[key] = data.boards[key].slice(0, 10);
