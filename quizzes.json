@@ -362,6 +362,21 @@
       "lat": 56.19583,
       "lng": 16.39815,
       "added": "2026-06-19"
+    },
+    {
+      "name": "WhatDatBird? - Paull Holme Strays, United Kingdom",
+      "continent": "Europe",
+      "country": "United Kingdom",
+      "description": "Paull Holme Strays, United Kingdom",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=53.7091609&lng=-0.2204164&place_name=Paull%20Holme%20Strays%2C%20United%20Kingdom&country_code=GB",
+      "coord_lat": 53.7091609,
+      "coord_lng": -0.2204164,
+      "photo_taxon": "Turdus merula",
+      "lat": 53.7091609,
+      "lng": -0.2204164,
+      "added": "2026-06-19"
     }
   ]
 }
