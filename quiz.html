@@ -19,7 +19,7 @@ window.onunhandledrejection = e => {
 };
 </script>
 <div id="app"></div>
-<script src="engine.js?v=6.03" onerror="document.getElementById('app').innerHTML='<div style=padding:2rem;font-family:sans-serif;color:#8a2c2c>Failed to fetch engine.js — check network connection.<br><br><a href=index.html>← Back</a></div>'"></script>
+<script src="engine.js?v=6.05" onerror="document.getElementById('app').innerHTML='<div style=padding:2rem;font-family:sans-serif;color:#8a2c2c>Failed to fetch engine.js — check network connection.<br><br><a href=index.html>← Back</a></div>'"></script>
 <script>
 const params     = new URLSearchParams(window.location.search);
 const PLACE_ID   = params.get('place_id');
@@ -41,6 +41,21 @@ let PLACE_BBOX = null;   // {minLat, maxLat, minLng, maxLng} from iNat bounding 
 let IS_COUNTRY = false;  // true if the searched place itself is a country
 const YEAR_FROM  = new Date().getFullYear() - 25;
 const YEAR_RANGE = `${YEAR_FROM},${new Date().getFullYear()}`;
+
+// ── User language / locale ─────────────────────────────────────────────────
+const BROWSER_LANG = (navigator.language || 'en').split('-')[0].toLowerCase();
+const LANG_TO_INAT_LOCALE = {
+  'af':'af','ar':'ar','be':'be','bg':'bg','bn':'bn','ca':'ca','cs':'cs','cy':'cy',
+  'da':'da','de':'de','el':'el','es':'es','et':'et','eu':'eu','fa':'fa','fi':'fi',
+  'fr':'fr','ga':'ga','gl':'gl','gu':'gu','he':'he','hi':'hi','hr':'hr','hu':'hu',
+  'hy':'hy','id':'id','is':'is','it':'it','ja':'ja','ka':'ka','kn':'kn','ko':'ko',
+  'lt':'lt','lv':'lv','mk':'mk','ml':'ml','mr':'mr','ms':'ms','my':'my',
+  'nl':'nl','no':'nb','pa':'pa','pl':'pl','pt':'pt','ro':'ro','ru':'ru',
+  'sk':'sk','sl':'sl','sq':'sq','sr':'sr','sv':'sv','sw':'sw','ta':'ta',
+  'te':'te','th':'th','tr':'tr','uk':'uk','ur':'ur','vi':'vi','zh':'zh',
+  'mi':'mi','sm':'sm',
+};
+const USER_LOCALE = localStorage.getItem('wdb-locale') || LANG_TO_INAT_LOCALE[BROWSER_LANG] || null;
 
 // ── Species blocklist (GBIF data quality issues) ───────────────────────────
 const BLOCKLIST = new Set([
@@ -122,8 +137,13 @@ async function processBatch(speciesItems) {
   return (await Promise.all(speciesItems.map(async ({key, count}) => {
     try {
       // 1. GBIF species: Latin name + real taxonomy keys
-      const gr = await fetch(`https://api.gbif.org/v1/species/${key}`);
-      const gd = await gr.json();
+      let gr = await fetch(`https://api.gbif.org/v1/species/${key}`);
+      let gd = await gr.json();
+      // Follow synonym → accepted taxon (e.g. Hen Harrier → Northern Harrier for NA records)
+      if (gd.taxonomicStatus === 'SYNONYM' && gd.acceptedKey && gd.acceptedKey !== key) {
+        gr = await fetch(`https://api.gbif.org/v1/species/${gd.acceptedKey}`);
+        gd = await gr.json();
+      }
       if (gd.rank !== 'SPECIES' || gd.class !== 'Aves') return null;
       const latin = gd.canonicalName;
       if (!latin) return null;
@@ -148,8 +168,11 @@ async function processBatch(speciesItems) {
         return null;
       }).catch(() => null) : null;
 
-      const name = gd.vernacularName || inat?.preferred_common_name || null;
+      let name = gd.vernacularName || inat?.preferred_common_name || null;
       if (!name) return null; // skip species with no usable common name
+      // Geographic name overrides for lumped taxa with different names by region
+      const NA_COUNTRIES = new Set(['US','CA','MX','GT','BZ','HN','SV','NI','CR','PA']);
+      if (latin === 'Circus cyaneus' && NA_COUNTRIES.has(COUNTRY_CODE)) name = 'Northern Harrier';
 
       return {
         name,
@@ -293,7 +316,7 @@ async function loadFromGBIF() {
     }
   }
 
-  if (!introShown) throw new Error('Could not find enough bird species with English names.');
+  if (!introShown) throw new Error('Could not find enough bird species with names.');
 
   // Attach locale-based indigenous names (e.g. Māori for NZ) if available
   const locale = COUNTRY_CODE ? COUNTRY_LOCALE[COUNTRY_CODE] : null;
@@ -307,6 +330,9 @@ async function loadFromGBIF() {
     }
     if (Object.keys(indNames).length > 0) setTiers(birds); // re-tier with names attached
   }
+
+  await fetchLocalNames(birds);
+  if (introShown) setTiers(birds);
 
   return birds;
 }
@@ -341,6 +367,32 @@ async function fetchIndigenousNames(baseUrl, locale) {
   } catch { return {}; }
 }
 
+async function fetchLocalNames(birds) {
+  if (!USER_LOCALE || USER_LOCALE === 'en') return;
+  const withId = birds.filter(b => b.inatId);
+  if (!withId.length) return;
+  const CHUNK = 30;
+  const chunks = [];
+  for (let i = 0; i < withId.length; i += CHUNK) chunks.push(withId.slice(i, i + CHUNK));
+  const results = await Promise.all(chunks.map(chunk =>
+    fetch(`https://api.inaturalist.org/v1/taxa?id=${chunk.map(b => b.inatId).join(',')}&locale=${USER_LOCALE}&per_page=30`)
+      .then(r => r.ok ? r.json() : { results: [] })
+      .catch(() => ({ results: [] }))
+  ));
+  const nameMap = {};
+  for (const d of results) {
+    for (const t of (d.results || [])) {
+      if (t.preferred_common_name && t.name) nameMap[t.name] = t.preferred_common_name;
+    }
+  }
+  for (const bird of birds) {
+    const local = nameMap[bird.latin];
+    if (local && local.toLowerCase() !== bird.name.toLowerCase() && local !== bird.indigenousName) {
+      bird.localName = local;
+    }
+  }
+}
+
 // ── iNat fallback (for places without a country code, or if GBIF fails) ───
 async function loadFromInat(bufferKm = 0) {
   if (bufferKm > 0 && PLACE_LAT === null) await fetchPlaceMeta(PLACE_ID);
@@ -355,7 +407,7 @@ async function loadFromInat(bufferKm = 0) {
   ]);
   if (!r.ok) throw new Error('iNat API error');
   const d = await r.json();
-  return (d.results || [])
+  const birds = (d.results || [])
     .filter(item => item.taxon?.preferred_common_name && item.taxon?.rank === 'species')
     .filter(item => !BLOCKLIST.has(item.taxon.name) && !placeNames?.blocklist?.includes(item.taxon.name))
     .map(item => ({
@@ -370,6 +422,8 @@ async function loadFromInat(bufferKm = 0) {
       seabird:       false,
       indigenousName: indNames[item.taxon.name] || null,
     }));
+  await fetchLocalNames(birds);
+  return birds;
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────────

@@ -1,11 +1,12 @@
-// WhatDatBird? Quiz Engine v6.04
+// WhatDatBird? Quiz Engine v6.06
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v6.04';
+const APP_VERSION = 'v6.06';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
 let CFG = {};
+let _inLibrary = null; // null=unchecked, true=in library, false=not in library
 let _swipeX = 0;
 
 // ── Constants ─────────────────────────────────────────────────────────────
@@ -269,6 +270,7 @@ async function fetchIDNote(wikiUrl) {
           .replace(/{{[^}]*}}/g, '')
           .replace(/<ref[^>]*>[\s\S]*?<\/ref>/gi, '')
           .replace(/<[^>]+>/g, '')
+          .replace(/\[\[\s*(?:File|Image):[^\]]*\]\]/gi, '')
           .replace(/\[\[(?:[^|\]]*\|)?([^\]]+)\]\]/g, '$1')
           .replace(/'{2,}/g, '')
           .replace(/==+[^=]+==+/g, '')
@@ -422,7 +424,7 @@ function getOptions(correct, pool) {
 let state = {
   phase:'loading', mode:'easy', loadError:null, buffer:0,
   queue:[], wrongBin:[], current:null,
-  streak:0, streakHistory:[], totalSeen:0, totalCorrect:0,
+  streak:0, streakHistory:[], totalSeen:0, totalCorrect:0, roundsCompleted:0,
   selected:null, options:[], imgUrl:null, imgLoading:false,
   photoUrls:[], photoIdx:0,
   audioPlaying:false, audioLoading:false, audioRec:null,
@@ -581,7 +583,7 @@ async function toggleIntroLeaderboard() {
         ${entries.map((e,i) => `<div class="lb-row-item">
           <span class="lb-rank">${i+1}</span>
           <span class="lb-name">${e.name}</span>
-          <span class="lb-score">${e.pts ?? e.score} pts / ${e.score} birds</span>
+          <span class="lb-score">${e.rounds ?? 1} round${(e.rounds ?? 1) !== 1 ? 's' : ''} · ${e.score} birds</span>
           <span class="lb-date">${e.date}</span>
         </div>`).join('')}
       </div>`;
@@ -644,8 +646,10 @@ function renderIntro(app, header) {
     <button class="btn-secondary" onclick="setState({phase:'species'})">&#128203; Species List</button>
     <button class="btn-secondary" onclick="toggleIntroLeaderboard()">&#127942; Leaderboards</button>
     <div id="introLbPanel" style="display:none;margin-top:12px"></div>
+    ${saveSectionHtml()}
     <button class="btn-back" onclick="setState({phase:'about'})">&#8505; About WhatDatBird?</button>
     <button class="btn-back" onclick="window.location.href='${CFG.backUrl}'">&#8592; All Quizzes</button>`;
+  if ((CFG.placeId || CFG.coordLat) && _inLibrary === null) checkInLibrary();
 }
 
 function renderCelebrate(app, header) {
@@ -660,15 +664,12 @@ function renderCelebrate(app, header) {
       ${canContinue ? `
         <button class="btn-primary" onclick="keepPlaying()" style="margin-bottom:12px;">Keep going for 10 more! 🚀</button>
         <br>` : ''}
-      <button class="btn-secondary" onclick="setState({phase:'result'})">Save score &amp; see results</button>
+      <button class="btn-secondary" onclick="setState({phase:'result', roundsCompleted: state.roundsCompleted + 1})">Save score &amp; see results</button>
     </div>`;
 }
 
 function keepPlaying() {
-  // Reset streak but keep queue and wrongBin — birds already mastered won't repeat
-  // since they've been removed from queue naturally
-  setState({ phase: 'quiz', streak: 0, streakHistory: [], selected: null, imgUrl: null, imgLoading: true, photoUrls: [], photoIdx: 0 });
-  // Advance to next bird
+  setState({ phase: 'quiz', streak: 0, streakHistory: [], roundsCompleted: state.roundsCompleted + 1, selected: null, imgUrl: null, imgLoading: true, photoUrls: [], photoIdx: 0 });
   _advance();
 }
 
@@ -684,11 +685,7 @@ function renderResult(app, header) {
   ].find(m=>m!==null);
 
   const canSave = CFG.placeId || CFG.coordLat;
-  const saveBtn = canSave ? `
-    <div id="saveLibSection">
-      <button class="btn-save-library" id="saveLibBtn" onclick="saveToLibrary()">&#127757; Add to Quiz Library</button>
-      <div id="saveLibMsg" style="font-size:0.8rem;color:#2a7a58;margin-top:8px;min-height:1.2em;text-align:center;font-weight:700;"></div>
-    </div>` : '';
+  const saveBtn = saveSectionHtml();
 
   const lbSection = canSave ? `
     <div class="lb-entry" id="lbEntry">
@@ -719,10 +716,23 @@ function renderResult(app, header) {
   launchConfetti();
   if (CFG.placeId || CFG.coordLat) {
     loadLeaderboard();
-    checkInLibrary();
+    if (_inLibrary === null) {
+      checkInLibrary();
+    } else if (_inLibrary === true) {
+      unlockLeaderboard();
+    }
   }
 }
 
+function saveSectionHtml() {
+  if (!(CFG.placeId || CFG.coordLat)) return '';
+  const show = _inLibrary === false ? '' : 'none';
+  return `
+    <div id="saveLibSection">
+      <button class="btn-save-library" id="saveLibBtn" onclick="saveToLibrary()" style="display:${show};">&#127757; Add to Quiz Library</button>
+      <div id="saveLibMsg" style="font-size:0.8rem;color:#2a7a58;margin-top:8px;min-height:1.2em;text-align:center;font-weight:700;"></div>
+    </div>`;
+}
 
 function unlockLeaderboard() {
   const locked   = document.getElementById('lbLocked');
@@ -743,11 +753,12 @@ async function checkInLibrary() {
       ? data.quizzes.some(q => String(q.place_id) === String(CFG.placeId))
       : data.quizzes.some(q => q.coord_lat && Math.abs(q.coord_lat - CFG.coordLat) < 0.001 && Math.abs(q.coord_lng - CFG.coordLng) < 0.001);
     if (alreadyIn) {
-      const btn = document.getElementById('saveLibBtn');
-      const msg = document.getElementById('saveLibMsg');
-      if (btn) btn.style.display = 'none';
-      if (msg) msg.style.display = 'none';
+      _inLibrary = true;
       unlockLeaderboard();
+    } else {
+      _inLibrary = false;
+      const btn = document.getElementById('saveLibBtn');
+      if (btn) btn.style.display = '';
     }
   } catch {}
 }
@@ -779,10 +790,11 @@ function renderQuiz(app) {
   if(state.selected) {
     const ok=state.selected===bird.name;
     const samoLabel = ok && bird[CFG.indigenousField] ? `<span class="overlay-samoan">${bird[CFG.indigenousField]}</span>` : '';
+    const localLabel = ok && bird.localName ? `<span class="overlay-samoan">${bird.localName}</span>` : '';
     overlay=`<div class="img-overlay ${ok?'overlay-correct':'overlay-wrong'}">
       <span>${ok?'&#10003;':'&#10007;'}</span>
       <span class="overlay-msg">${ok?CORRECT_MSGS[Math.floor(Math.random()*CORRECT_MSGS.length)]:`It's the ${bird.name}`}</span>
-      ${samoLabel}
+      ${samoLabel}${localLabel}
       <button class="btn-next-overlay" onclick="advance()">Next &#8594;</button>
     </div>`;
   }
@@ -796,8 +808,9 @@ function renderQuiz(app) {
     const safe=opt.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     const matchBird=optBirds[i];
     const indLabel = matchBird?.[CFG.indigenousField] ? `<span class="opt-indigenous">${matchBird[CFG.indigenousField]}</span>` : '';
+    const localOptLabel = matchBird?.localName ? `<span class="opt-indigenous">${matchBird.localName}</span>` : '';
     const latinLabel = showLatin && matchBird?.latin ? `<span class="opt-latin-small">${matchBird.latin}</span>` : '';
-    return `<button class="${cls}" ${state.selected?'disabled':''} onclick="selectAnswer('${safe}',event)"><span class="opt-english">${opt}</span>${indLabel}${latinLabel}</button>`;
+    return `<button class="${cls}" ${state.selected?'disabled':''} onclick="selectAnswer('${safe}',event)"><span class="opt-english">${opt}</span>${indLabel}${localOptLabel}${latinLabel}</button>`;
   }).join('');
 
   let fieldNote='';
@@ -810,6 +823,7 @@ function renderQuiz(app) {
         <div class="fn-head">
           <div class="fn-species-name">${bird.name}</div>
           ${bird[CFG.indigenousField]?`<div class="fn-species-samoan">${bird[CFG.indigenousField]}</div>`:''}
+          ${bird.localName?`<div class="fn-species-samoan">${bird.localName}</div>`:''}
           <div class="fn-species-latin">${bird.latin||''}</div>
         </div>
         <div class="fn-label">&#128269; HOW TO IDENTIFY</div>
@@ -888,13 +902,14 @@ function renderSpeciesList(app, header, sortMode) {
     const rarityPill = rarity ? `<span class="rarity-pill rarity-${rarity}">${rarity.charAt(0).toUpperCase()+rarity.slice(1)}</span>` : '';
     const countBadge = bird.count ? `<span class="obs-count">${bird.count.toLocaleString()} iNat obs</span>` : '';
     const samoanInline = bird[CFG.indigenousField] ? `<span class="sp-samoan-inline">${bird[CFG.indigenousField]}</span>` : '';
+    const localInline = bird.localName ? `<span class="sp-samoan-inline">${bird.localName}</span>` : '';
     const badges = birdBadges(bird);
     const detailId = `spd-${idx}`;
     const familyLabel = _spSortMode === 'taxonomy' && bird.family ? `<span class="sp-family">${bird.family}</span>` : '';
     return `<div class="sp-item">
       <div class="sp-name-row">
         <span class="sp-name">${bird.name}</span>
-        ${samoanInline}
+        ${samoanInline}${localInline}
         <span class="sp-latin">${bird.latin||''}</span>
         <button class="sp-chevron-btn" onclick="toggleSpDetail('${detailId}',this)" data-latin="${encodeURIComponent(bird.latin||bird.name)}" data-wiki="${encodeURIComponent(bird.wikiUrl||'')}" data-inat="${bird.inatId||''}" data-photo="${encodeURIComponent(bird.defaultPhoto||'')}" aria-label="Show details"><span class="sp-chevron-label">Info</span><span class="sp-chevron-arrow">&#8250;</span></button>
       </div>
@@ -1035,7 +1050,7 @@ function renderAbout(app, header) {
 
       <div class="field-note" style="margin-bottom:12px">
         <div class="fn-label">AREA BUFFER</div>
-        <p class="fn-main">If fewer than 15 species are recorded within a location's boundaries, the app automatically expands the search radius (5km, 10km, 25km, 50km) until it finds enough species. It uses the place's centroid coordinates from iNaturalist and switches from a place_id query to a lat/lng/radius query.</p>
+        <p class="fn-main">If fewer than 15 species are recorded within a location's boundaries, the app automatically expands the search radius (5km, 10km, 25km, 50km) until it finds enough species. It uses the place's centroid coordinates from iNaturalist and switches from a place_id query to a lat/lng/radius query. For coordinate-based quizzes the search starts at 100m and grows in fine steps (200m, 300m… 1km, 2km, 5km…) until 25 species are found, keeping the quiz as local as possible.</p>
       </div>
 
       <div class="field-note" style="margin-bottom:12px">
@@ -1046,7 +1061,7 @@ function renderAbout(app, header) {
       <div class="field-note" style="margin-bottom:12px">
         <div class="fn-label">WHAT ABOUT INDIGENOUS NAMES?</div>
         <p class="fn-main">Species names come from GBIF, which uses the most widely-used common name globally. Tui is Tui — but Pūkeko comes up as Australasian Swamphen. For some places, local names are shown alongside the English name — currently Māori names for New Zealand quizzes and Samoan names for Samoa.</p>
-        <p class="fn-main" style="margin-top:8px">The right solution would link indigenous and common names to the geographic origin of each record — so the name you see reflects where the bird actually is. There are over 7,000 languages in the world. That's a problem worth solving.</p>
+        <p class="fn-main" style="margin-top:8px">Common names are shown in your browser's language where available (via iNaturalist), alongside indigenous names for supported regions. Coverage varies — not every species has a name in every language.</p>
       </div>
 
       <div class="field-note" style="margin-bottom:12px">
@@ -1073,6 +1088,8 @@ function renderAbout(app, header) {
 
 // ── Actions ───────────────────────────────────────────────────────────────
 function adjustImgPosition(img) {
+  // On narrow phones the CSS fixes the box height, so skip inline height overrides
+  if (window.innerWidth <= 500) return;
   const isPortrait = img.naturalWidth < img.naturalHeight;
   if(isPortrait) {
     const fullH = img.offsetWidth/(img.naturalWidth/img.naturalHeight);
@@ -1164,7 +1181,7 @@ function startQuiz() {
   const pool=getPool();
   const queue=buildQueue(pool);
   const first=queue.shift();
-  setState({phase:'quiz',queue,wrongBin:[],current:first,streak:0,streakHistory:[],totalSeen:0,totalCorrect:0,selected:null,imgUrl:null,imgLoading:true,photoUrls:[],photoIdx:0,options:getOptions(first,pool)});
+  setState({phase:'quiz',queue,wrongBin:[],current:first,streak:0,streakHistory:[],totalSeen:0,totalCorrect:0,roundsCompleted:0,selected:null,imgUrl:null,imgLoading:true,photoUrls:[],photoIdx:0,options:getOptions(first,pool)});
   fetchImage(first, state.mode).then(url => {
     const all=(inatPhotoCache[first.latin||first.name]||[]).slice(0,5);
     const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;
@@ -1175,6 +1192,7 @@ function startQuiz() {
 
 function selectAnswer(opt, event) {
   if(state.selected) return;
+  if(Date.now() - _advanceTime < 600) return; // ignore ghost taps after advancing
   const bird=state.current;
   const correct=opt===bird.name;
   const newHistory=[...state.streakHistory,correct];
@@ -1190,8 +1208,10 @@ function selectAnswer(opt, event) {
   if(newStreak>=STREAK_TARGET) setTimeout(()=>setState({phase:'celebrate'}),2000);
 }
 
+let _advanceTime = 0;
 function advance() {
   if (state.streak >= STREAK_TARGET) return; // celebration already queued
+  _advanceTime = Date.now();
   // Fade out current image before re-rendering
   const box = document.getElementById('imgBox');
   if (box) { box.style.opacity='0'; box.style.transition='opacity 0.18s ease'; }
@@ -1273,7 +1293,7 @@ async function loadLeaderboard(scrollTo = false) {
         entries.map((e, i) => `<div class="lb-row-item">
           <span class="lb-rank">${i + 1}</span>
           <span class="lb-name">${e.name}</span>
-          <span class="lb-score">${e.pts ?? e.score} pts / ${e.score} birds</span>
+          <span class="lb-score">${e.rounds ?? 1} round${(e.rounds ?? 1) !== 1 ? 's' : ''} · ${e.score} birds</span>
           <span class="lb-date">${e.date}</span>
         </div>`).join('') + '</div>';
     }
@@ -1300,12 +1320,12 @@ async function submitScore() {
     data.plays[key] = (data.plays[key] || 0) + 1;
     const today = new Date().toISOString().split('T')[0];
     data.play_dates[today] = (data.play_dates[today] || 0) + 1;
-    data.boards[key].push({ name, score: state.totalSeen, pts: state.totalCorrect, date: new Date().toISOString().split('T')[0] });
-    data.boards[key].sort((a, b) => (b.pts ?? 0) - (a.pts ?? 0) || (a.score ?? 0) - (b.score ?? 0));
+    data.boards[key].push({ name, rounds: state.roundsCompleted, score: state.totalSeen, pts: state.totalCorrect, date: new Date().toISOString().split('T')[0] });
+    data.boards[key].sort((a, b) => (b.rounds ?? 1) - (a.rounds ?? 1) || (a.score ?? 0) - (b.score ?? 0));
     data.boards[key] = data.boards[key].slice(0, 10);
 
     const body = JSON.stringify({
-      message: `Leaderboard: ${name} scored ${state.totalCorrect} pts at ${CFG.placeName}`,
+      message: `Leaderboard: ${name} scored ${state.roundsCompleted} round(s) / ${state.totalSeen} birds at ${CFG.placeName}`,
       sha: sha || undefined,
       content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2)))),
     });
@@ -1524,6 +1544,7 @@ function initEngine(config) {
   CFG = config;
   CFG.indigenousField = config.indigenousField || 'indigenousName';
   CFG.easyUseWiki = config.easyUseWiki || false;
+  _inLibrary = null;
 
   // Compute tiers if not provided
   if (!CFG.easyBirds) CFG.easyBirds = [];
