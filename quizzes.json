@@ -377,6 +377,21 @@
       "lat": 53.7091609,
       "lng": -0.2204164,
       "added": "2026-06-19"
+    },
+    {
+      "name": "WhatDatBird? - Birds near Jangsong-rodongjagu, North Korea",
+      "continent": "Other",
+      "country": "Birds near Jangsong-rodongjagu, North Korea",
+      "description": "Birds near Jangsong-rodongjagu, North Korea",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=39.71602&lng=124.58719&place_name=Birds%20near%20Jangsong-rodongjagu%2C%20North%20Korea&country_code=KP",
+      "coord_lat": 39.71602,
+      "coord_lng": 124.58719,
+      "photo_taxon": null,
+      "lat": 39.71602,
+      "lng": 124.58719,
+      "added": "2026-06-19"
     }
   ]
 }
