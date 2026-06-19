@@ -347,6 +347,21 @@
       "lat": -38.0204,
       "lng": 177.09932,
       "added": "2026-06-19"
+    },
+    {
+      "name": "WhatDatBird? - Birds near Ottenby",
+      "continent": "Europe",
+      "country": "Sweden",
+      "description": "Birds near Ottenby",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=56.19583&lng=16.39815&place_name=Birds%20near%20Ottenby&country_code=SE",
+      "coord_lat": 56.19583,
+      "coord_lng": 16.39815,
+      "photo_taxon": "Branta leucopsis",
+      "lat": 56.19583,
+      "lng": 16.39815,
+      "added": "2026-06-19"
     }
   ]
 }
