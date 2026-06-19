@@ -1192,6 +1192,7 @@ function startQuiz() {
 
 function selectAnswer(opt, event) {
   if(state.selected) return;
+  if(Date.now() - _advanceTime < 600) return; // ignore ghost taps after advancing
   const bird=state.current;
   const correct=opt===bird.name;
   const newHistory=[...state.streakHistory,correct];
@@ -1207,8 +1208,10 @@ function selectAnswer(opt, event) {
   if(newStreak>=STREAK_TARGET) setTimeout(()=>setState({phase:'celebrate'}),2000);
 }
 
+let _advanceTime = 0;
 function advance() {
   if (state.streak >= STREAK_TARGET) return; // celebration already queued
+  _advanceTime = Date.now();
   // Fade out current image before re-rendering
   const box = document.getElementById('imgBox');
   if (box) { box.style.opacity='0'; box.style.transition='opacity 0.18s ease'; }
