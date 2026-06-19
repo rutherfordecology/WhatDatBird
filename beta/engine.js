@@ -270,6 +270,7 @@ async function fetchIDNote(wikiUrl) {
           .replace(/{{[^}]*}}/g, '')
           .replace(/<ref[^>]*>[\s\S]*?<\/ref>/gi, '')
           .replace(/<[^>]+>/g, '')
+          .replace(/\[\[\s*(?:File|Image):[^\]]*\]\]/gi, '')
           .replace(/\[\[(?:[^|\]]*\|)?([^\]]+)\]\]/g, '$1')
           .replace(/'{2,}/g, '')
           .replace(/==+[^=]+==+/g, '')
