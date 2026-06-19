@@ -277,6 +277,17 @@ async function loadFromGBIF() {
           if (hc && hard) hc.textContent = hard.length + ' SPECIES';
           if (cc && complete) cc.textContent = complete.length + ' SPECIES';
           if (rc && rarity) rc.textContent = rarity.length + ' SPECIES';
+          // Enable buttons whose thresholds are now met (may have rendered disabled on first paint)
+          const hasHard = hard && hard.length > easy.length;
+          const hasComplete = complete && complete.length > (hard || easy).length;
+          const hasRarity = rarity && rarity.length >= 8;
+          const allModeBtns = [...document.querySelectorAll('.mode-btn')];
+          const hBtn = allModeBtns.find(b => b.textContent.includes('Birder'));
+          const cBtn = allModeBtns.find(b => b.textContent.includes('Complete'));
+          const rBtn = allModeBtns.find(b => b.textContent.includes('Rarity'));
+          if (hBtn && hasHard) { hBtn.disabled = false; hBtn.onclick = () => setMode('hard'); }
+          if (cBtn && hasComplete) { cBtn.disabled = false; cBtn.onclick = () => setMode('complete'); }
+          if (rBtn && hasRarity) { rBtn.disabled = false; rBtn.onclick = () => setMode('rarity'); }
         }
       }
     }
@@ -287,7 +298,9 @@ async function loadFromGBIF() {
   // Attach locale-based indigenous names (e.g. Māori for NZ) if available
   const locale = COUNTRY_CODE ? COUNTRY_LOCALE[COUNTRY_CODE] : null;
   if (locale) {
-    const baseUrl = `https://api.inaturalist.org/v1/observations/species_counts?place_id=${PLACE_ID}&iconic_taxa=Aves&quality_grade=research&per_page=200&order_by=observations_count&order=desc&d1=${YEAR_FROM}-01-01`;
+    const baseUrl = PLACE_ID
+      ? `https://api.inaturalist.org/v1/observations/species_counts?place_id=${PLACE_ID}&iconic_taxa=Aves&quality_grade=research&per_page=200&order_by=observations_count&order=desc&d1=${YEAR_FROM}-01-01`
+      : `https://api.inaturalist.org/v1/observations/species_counts?lat=${PLACE_LAT}&lng=${PLACE_LNG}&radius=${state?.buffer||25}&iconic_taxa=Aves&quality_grade=research&per_page=200&order_by=observations_count&order=desc&d1=${YEAR_FROM}-01-01`;
     const indNames = await fetchIndigenousNames(baseUrl, locale);
     for (const bird of birds) {
       if (!bird.indigenousName && indNames[bird.latin]) bird.indigenousName = indNames[bird.latin];
