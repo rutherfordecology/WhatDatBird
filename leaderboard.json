@@ -260,6 +260,12 @@
     ],
     "coord_-23.443_151.915_easy": [
       {
+        "name": "Lobotaniser",
+        "score": 21,
+        "pts": 17,
+        "date": "2026-06-19"
+      },
+      {
         "name": "Richard",
         "score": 13,
         "pts": 12,
@@ -427,9 +433,10 @@
   },
   "plays": {
     "8504_easy": 1,
-    "coord_-38.020_177.099_complete": 1
+    "coord_-38.020_177.099_complete": 1,
+    "coord_-23.443_151.915_easy": 1
   },
   "play_dates": {
-    "2026-06-19": 2
+    "2026-06-19": 3
   }
 }
