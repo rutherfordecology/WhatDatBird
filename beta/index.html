@@ -415,19 +415,13 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(pickMap);
 pickMap.on('click', onMapClick);
 
-const quizIcon = L.divIcon({
-  className: '',
-  html: '<div style="width:12px;height:12px;background:#1a5940;border:2.5px solid #fff;border-radius:50%;box-shadow:0 1px 5px rgba(0,0,0,0.35)"></div>',
-  iconSize: [12, 12], iconAnchor: [6, 6], popupAnchor: [0, -10],
-});
-
 async function addQuizMarkers(quizzes) {
   const coordPromises = quizzes.map(q => resolveQuizCoords(q).then(c => ({ q, c })));
   for (const p of coordPromises) {
     const { q, c } = await p;
     if (!c) continue;
     const label = q.description || q.name.replace('WhatDatBird? - ', '');
-    L.marker([c.lat, c.lng], { icon: quizIcon })
+    L.marker([c.lat, c.lng])
       .addTo(pickMap)
       .bindPopup(`<div style="font-family:system-ui,-apple-system,sans-serif;text-align:center;min-width:130px"><strong style="color:#1a5940;display:block;margin-bottom:6px">${label}</strong><a href="${q.url}" style="color:#1a5940;font-weight:800;text-decoration:none">Play this quiz &#8594;</a></div>`);
   }
@@ -656,7 +650,7 @@ async function onMapClick(e) {
   }
 }
 </script>
-<script src="engine.js?v=6.01"></script>
+<script src="engine.js?v=6.02"></script>
 <script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : '';</script>
 </body>
 </html>
