@@ -428,14 +428,18 @@ async function boot() {
       } catch {}
     }
 
-    // Expand bbox until we find enough species
-    const PAD_STEPS = [0.05, 0.1, 0.2, 0.5, 1.0, 2.0];
+    // Expand bbox until we find enough species — start very small and grow
+    // Steps: 100m, 200m, 300m, 400m, 500m, 750m, 1km, 2km, 5km, 10km, 25km, 50km half-sides
+    const PAD_STEPS = [0.0009, 0.0018, 0.0027, 0.0036, 0.0045, 0.0068, 0.009, 0.018, 0.045, 0.09, 0.225, 0.45, 1.0, 2.0];
     const MIN_SPECIES = 25;
+    const padLabel = pad => {
+      const m = Math.round(pad * 111000);
+      return m < 1000 ? `${m}m` : `${(m/1000).toFixed(m < 10000 ? 1 : 0)}km`;
+    };
     let foundPad = null;
     for (const pad of PAD_STEPS) {
       PLACE_BBOX = { minLat: COORD_LAT - pad, maxLat: COORD_LAT + pad, minLng: COORD_LNG - pad, maxLng: COORD_LNG + pad };
-      const approxKm = Math.round(pad * 111);
-      updateLoadingProgress(`Searching within ${approxKm}km of ${PLACE_NAME}...`);
+      updateLoadingProgress(`Searching within ${padLabel(pad)} of ${PLACE_NAME}...`);
       try {
         // Query GBIF directly — no extra padding, no country fallback
         const r = await fetch(bboxUrl(PLACE_BBOX, 0));
@@ -447,7 +451,7 @@ async function boot() {
 
     if (foundPad !== null) {
       // PLACE_BBOX already set to the winning pad — run full GBIF load with no extra padding
-      updateLoadingProgress(`Loading species within ${Math.round(foundPad * 111)}km of ${PLACE_NAME}...`);
+      updateLoadingProgress(`Loading species within ${padLabel(foundPad)} of ${PLACE_NAME}...`);
       try {
         await loadFromGBIF();
         return;
