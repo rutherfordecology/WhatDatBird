@@ -392,6 +392,20 @@
       "lat": 39.71602,
       "lng": 124.58719,
       "added": "2026-06-19"
+    },
+    {
+      "name": "WhatDatBird? - Montgomery County, US, OH",
+      "continent": "Other",
+      "country": "Montgomery County, US, OH",
+      "description": "Montgomery County, US, OH",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?place_id=1695&place_name=Montgomery%20County%2C%20US%2C%20OH",
+      "place_id": 1695,
+      "photo_taxon": null,
+      "lat": 39.7545869158,
+      "lng": -84.2906820721,
+      "added": "2026-06-19"
     }
   ]
 }
