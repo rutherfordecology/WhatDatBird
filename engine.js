@@ -1,7 +1,7 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.98';
+const APP_VERSION = 'v5.99';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -1212,6 +1212,7 @@ function selectAnswer(opt, event) {
 }
 
 function advance() {
+  if (state.streak >= STREAK_TARGET) return; // celebration already queued
   // Fade out current image before re-rendering
   const box = document.getElementById('imgBox');
   if (box) { box.style.opacity='0'; box.style.transition='opacity 0.18s ease'; }
