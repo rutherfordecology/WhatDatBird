@@ -420,6 +420,21 @@
       "lat": 41.2389743449,
       "lng": -96.0647477851,
       "added": "2026-06-19"
+    },
+    {
+      "name": "WhatDatBird? - Keoladeo Ghana National Park, India",
+      "continent": "Asia",
+      "country": "India",
+      "description": "Keoladeo Ghana National Park, India",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=27.165184099999998&lng=77.5265628&place_name=Keoladeo%20Ghana%20National%20Park%2C%20India&country_code=IN",
+      "coord_lat": 27.165184099999998,
+      "coord_lng": 77.5265628,
+      "photo_taxon": "Mycteria leucocephala",
+      "lat": 27.165184099999998,
+      "lng": 77.5265628,
+      "added": "2026-06-19"
     }
   ]
 }
