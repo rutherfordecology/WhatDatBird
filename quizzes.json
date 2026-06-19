@@ -406,6 +406,20 @@
       "lat": 39.7545869158,
       "lng": -84.2906820721,
       "added": "2026-06-19"
+    },
+    {
+      "name": "WhatDatBird? - Omaha, NE Metro Area",
+      "continent": "Other",
+      "country": "Omaha, NE Metro Area",
+      "description": "Omaha, NE Metro Area",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?place_id=123395&place_name=Omaha%2C%20NE%20Metro%20Area",
+      "place_id": 123395,
+      "photo_taxon": null,
+      "lat": 41.2389743449,
+      "lng": -96.0647477851,
+      "added": "2026-06-19"
     }
   ]
 }
