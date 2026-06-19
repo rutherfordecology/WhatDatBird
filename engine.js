@@ -1,7 +1,7 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.99';
+const APP_VERSION = 'v6.00';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -684,20 +684,9 @@ function renderResult(app, header) {
   ].find(m=>m!==null);
 
   const canSave = CFG.placeId || CFG.coordLat;
-  const defaultQuizName = CFG.placeName;
   const saveBtn = canSave ? `
     <div id="saveLibSection">
-      <button class="btn-save-library" id="saveLibBtn" onclick="showRenameForm()">&#127757; Add to Quiz Library</button>
-      <div id="saveLibRename" style="display:none;margin-top:10px;">
-        <div style="font-size:0.8rem;color:#6b6960;margin-bottom:6px;text-align:center;">Name this quiz in the library:</div>
-        <div style="display:flex;gap:8px;max-width:380px;margin:0 auto;">
-          <input id="saveLibName" type="text" maxlength="60" value="${defaultQuizName.replace(/"/g,'&quot;')}"
-            style="flex:1;padding:8px 12px;font-size:0.88rem;border:1.5px solid #dddbd3;border-radius:8px;outline:none;font-family:inherit;"
-            onfocus="this.style.borderColor='#2a7a58'" onblur="this.style.borderColor='#dddbd3'">
-          <button onclick="saveToLibrary()" style="padding:8px 16px;background:#1a5940;color:#fff;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-family:inherit;font-size:0.88rem;">Save</button>
-          <button onclick="hideRenameForm()" style="padding:8px 12px;background:none;border:1.5px solid #dddbd3;border-radius:8px;cursor:pointer;font-family:inherit;font-size:0.88rem;color:#6b6960;">✕</button>
-        </div>
-      </div>
+      <button class="btn-save-library" id="saveLibBtn" onclick="saveToLibrary()">&#127757; Add to Quiz Library</button>
       <div id="saveLibMsg" style="font-size:0.8rem;color:#2a7a58;margin-top:8px;min-height:1.2em;text-align:center;font-weight:700;"></div>
     </div>` : '';
 
@@ -734,16 +723,6 @@ function renderResult(app, header) {
   }
 }
 
-function showRenameForm() {
-  document.getElementById('saveLibBtn').style.display = 'none';
-  document.getElementById('saveLibRename').style.display = 'block';
-  document.getElementById('saveLibName').focus();
-  document.getElementById('saveLibName').select();
-}
-function hideRenameForm() {
-  document.getElementById('saveLibBtn').style.display = '';
-  document.getElementById('saveLibRename').style.display = 'none';
-}
 
 function unlockLeaderboard() {
   const locked   = document.getElementById('lbLocked');
@@ -1340,10 +1319,8 @@ async function submitScore() {
 async function saveToLibrary() {
   const msg = document.getElementById('saveLibMsg');
   if (!CFG.placeId && !CFG.coordLat) return;
-  const nameInput = document.getElementById('saveLibName');
-  const quizLabel = nameInput ? nameInput.value.trim() || CFG.placeName : CFG.placeName;
-  // Disable the save button inside the rename form
-  const saveBtn = document.querySelector('#saveLibRename button');
+  const quizLabel = CFG.placeName;
+  const saveBtn = document.getElementById('saveLibBtn');
   if (saveBtn) saveBtn.disabled = true;
   msg.style.color = '#2a7a58';
   msg.textContent = 'Reading library...';
