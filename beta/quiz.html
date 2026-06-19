@@ -42,6 +42,21 @@ let IS_COUNTRY = false;  // true if the searched place itself is a country
 const YEAR_FROM  = new Date().getFullYear() - 25;
 const YEAR_RANGE = `${YEAR_FROM},${new Date().getFullYear()}`;
 
+// ── User language / locale ─────────────────────────────────────────────────
+const BROWSER_LANG = (navigator.language || 'en').split('-')[0].toLowerCase();
+const LANG_TO_INAT_LOCALE = {
+  'af':'af','ar':'ar','be':'be','bg':'bg','bn':'bn','ca':'ca','cs':'cs','cy':'cy',
+  'da':'da','de':'de','el':'el','es':'es','et':'et','eu':'eu','fa':'fa','fi':'fi',
+  'fr':'fr','ga':'ga','gl':'gl','gu':'gu','he':'he','hi':'hi','hr':'hr','hu':'hu',
+  'hy':'hy','id':'id','is':'is','it':'it','ja':'ja','ka':'ka','kn':'kn','ko':'ko',
+  'lt':'lt','lv':'lv','mk':'mk','ml':'ml','mr':'mr','ms':'ms','my':'my',
+  'nl':'nl','no':'nb','pa':'pa','pl':'pl','pt':'pt','ro':'ro','ru':'ru',
+  'sk':'sk','sl':'sl','sq':'sq','sr':'sr','sv':'sv','sw':'sw','ta':'ta',
+  'te':'te','th':'th','tr':'tr','uk':'uk','ur':'ur','vi':'vi','zh':'zh',
+  'mi':'mi','sm':'sm',
+};
+const USER_LOCALE = localStorage.getItem('wdb-locale') || LANG_TO_INAT_LOCALE[BROWSER_LANG] || null;
+
 // ── Species blocklist (GBIF data quality issues) ───────────────────────────
 const BLOCKLIST = new Set([
   'Porphyrio porphyrio', // Western Swamphen — misidentifications in NZ GBIF data
@@ -293,7 +308,7 @@ async function loadFromGBIF() {
     }
   }
 
-  if (!introShown) throw new Error('Could not find enough bird species with English names.');
+  if (!introShown) throw new Error('Could not find enough bird species with names.');
 
   // Attach locale-based indigenous names (e.g. Māori for NZ) if available
   const locale = COUNTRY_CODE ? COUNTRY_LOCALE[COUNTRY_CODE] : null;
@@ -307,6 +322,9 @@ async function loadFromGBIF() {
     }
     if (Object.keys(indNames).length > 0) setTiers(birds); // re-tier with names attached
   }
+
+  await fetchLocalNames(birds);
+  if (introShown) setTiers(birds);
 
   return birds;
 }
@@ -341,6 +359,32 @@ async function fetchIndigenousNames(baseUrl, locale) {
   } catch { return {}; }
 }
 
+async function fetchLocalNames(birds) {
+  if (!USER_LOCALE || USER_LOCALE === 'en') return;
+  const withId = birds.filter(b => b.inatId);
+  if (!withId.length) return;
+  const CHUNK = 30;
+  const chunks = [];
+  for (let i = 0; i < withId.length; i += CHUNK) chunks.push(withId.slice(i, i + CHUNK));
+  const results = await Promise.all(chunks.map(chunk =>
+    fetch(`https://api.inaturalist.org/v1/taxa?id=${chunk.map(b => b.inatId).join(',')}&locale=${USER_LOCALE}&per_page=30`)
+      .then(r => r.ok ? r.json() : { results: [] })
+      .catch(() => ({ results: [] }))
+  ));
+  const nameMap = {};
+  for (const d of results) {
+    for (const t of (d.results || [])) {
+      if (t.preferred_common_name && t.name) nameMap[t.name] = t.preferred_common_name;
+    }
+  }
+  for (const bird of birds) {
+    const local = nameMap[bird.latin];
+    if (local && local.toLowerCase() !== bird.name.toLowerCase() && local !== bird.indigenousName) {
+      bird.localName = local;
+    }
+  }
+}
+
 // ── iNat fallback (for places without a country code, or if GBIF fails) ───
 async function loadFromInat(bufferKm = 0) {
   if (bufferKm > 0 && PLACE_LAT === null) await fetchPlaceMeta(PLACE_ID);
@@ -355,7 +399,7 @@ async function loadFromInat(bufferKm = 0) {
   ]);
   if (!r.ok) throw new Error('iNat API error');
   const d = await r.json();
-  return (d.results || [])
+  const birds = (d.results || [])
     .filter(item => item.taxon?.preferred_common_name && item.taxon?.rank === 'species')
     .filter(item => !BLOCKLIST.has(item.taxon.name) && !placeNames?.blocklist?.includes(item.taxon.name))
     .map(item => ({
@@ -370,6 +414,8 @@ async function loadFromInat(bufferKm = 0) {
       seabird:       false,
       indigenousName: indNames[item.taxon.name] || null,
     }));
+  await fetchLocalNames(birds);
+  return birds;
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────────
