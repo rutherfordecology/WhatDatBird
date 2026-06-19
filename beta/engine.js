@@ -1,7 +1,7 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v6.02';
+const APP_VERSION = 'v6.03';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -1266,21 +1266,32 @@ async function readLB() {
   return { sha: d.sha, data };
 }
 
-async function loadLeaderboard() {
+async function loadLeaderboard(scrollTo = false) {
   const board = document.getElementById('lbBoard');
   if (!board) return;
   try {
     const { data } = await readLB();
-    const entries = (data.boards?.[`${CFG.placeId}_${state.mode}`] || []).slice(0, 10);
-    if (!entries.length) { board.innerHTML = ''; return; }
-    const modeLabel = state.mode==='complete'?'Complete':state.mode==='hard'?'Birder':state.mode==='rarity'?'Rarity':'Common';
-    board.innerHTML = `<div class="lb-title">&#127942; Leaderboard — ${CFG.placeName} · ${modeLabel}</div>` +
-      entries.map((e, i) => `<div class="lb-row-item">
-        <span class="lb-rank">${i + 1}</span>
-        <span class="lb-name">${e.name}</span>
-        <span class="lb-score">${e.pts ?? e.score} pts / ${e.score} birds</span>
-        <span class="lb-date">${e.date}</span>
-      </div>`).join('');
+    const MODES = [
+      { key: 'easy', label: 'Common' }, { key: 'hard', label: 'Birder' },
+      { key: 'complete', label: 'Complete' }, { key: 'rarity', label: 'Rarity' },
+    ];
+    let html = '';
+    for (const { key, label } of MODES) {
+      const lbKey = CFG.placeId
+        ? `${CFG.placeId}_${key}`
+        : `coord_${CFG.coordLat.toFixed(3)}_${CFG.coordLng.toFixed(3)}_${key}`;
+      const entries = (data.boards?.[lbKey] || []).slice(0, 10);
+      if (!entries.length) continue;
+      html += `<div style="margin-bottom:14px"><div class="lb-title" style="margin-bottom:6px">&#127942; ${label}</div>` +
+        entries.map((e, i) => `<div class="lb-row-item">
+          <span class="lb-rank">${i + 1}</span>
+          <span class="lb-name">${e.name}</span>
+          <span class="lb-score">${e.pts ?? e.score} pts / ${e.score} birds</span>
+          <span class="lb-date">${e.date}</span>
+        </div>`).join('') + '</div>';
+    }
+    board.innerHTML = html || '';
+    if (html && scrollTo) board.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   } catch { board.innerHTML = ''; }
 }
 
@@ -1322,7 +1333,7 @@ async function submitScore() {
     }
     if (!putR.ok) throw new Error(`GitHub write ${putR.status}`);
     if (entry) entry.style.display = 'none';
-    loadLeaderboard();
+    loadLeaderboard(true);
   } catch (e) {
     if (msgEl) { msgEl.style.color='#8a2c2c'; msgEl.textContent=`Could not save: ${e.message}`; }
   }
