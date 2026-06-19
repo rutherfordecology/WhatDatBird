@@ -168,8 +168,11 @@ async function processBatch(speciesItems) {
         return null;
       }).catch(() => null) : null;
 
-      const name = gd.vernacularName || inat?.preferred_common_name || null;
+      let name = gd.vernacularName || inat?.preferred_common_name || null;
       if (!name) return null; // skip species with no usable common name
+      // Geographic name overrides for lumped taxa with different names by region
+      const NA_COUNTRIES = new Set(['US','CA','MX','GT','BZ','HN','SV','NI','CR','PA']);
+      if (latin === 'Circus cyaneus' && NA_COUNTRIES.has(COUNTRY_CODE)) name = 'Northern Harrier';
 
       return {
         name,
