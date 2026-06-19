@@ -1,7 +1,7 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.96';
+const APP_VERSION = 'v5.97';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -1070,7 +1070,7 @@ function renderAbout(app, header) {
 
       <div class="field-note" style="margin-bottom:12px">
         <div class="fn-label">AREA BUFFER</div>
-        <p class="fn-main">If fewer than 15 species are recorded within a location's boundaries, the app automatically expands the search radius (5km, 10km, 25km, 50km) until it finds enough species. It uses the place's centroid coordinates from iNaturalist and switches from a place_id query to a lat/lng/radius query.</p>
+        <p class="fn-main">If fewer than 15 species are recorded within a location's boundaries, the app automatically expands the search radius (5km, 10km, 25km, 50km) until it finds enough species. It uses the place's centroid coordinates from iNaturalist and switches from a place_id query to a lat/lng/radius query. For coordinate-based quizzes the search starts at 100m and grows in fine steps (200m, 300m… 1km, 2km, 5km…) until 25 species are found, keeping the quiz as local as possible.</p>
       </div>
 
       <div class="field-note" style="margin-bottom:12px">
