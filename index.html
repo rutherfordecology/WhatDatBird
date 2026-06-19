@@ -330,10 +330,11 @@ async function loadTaxonPhoto(taxon, el) {
 
 async function loadPlacePhoto(placeId, el) {
   try {
-    const r = await fetch(`https://api.inaturalist.org/v1/observations/species_counts?place_id=${placeId}&iconic_taxa=Aves&quality_grade=research&per_page=1&order_by=observations_count&order=desc`);
+    const r = await fetch(`https://api.inaturalist.org/v1/observations/species_counts?place_id=${placeId}&iconic_taxa=Aves&quality_grade=research&per_page=20&order_by=observations_count&order=desc`);
     const d = await r.json();
-    const photo = d.results?.[0]?.taxon?.default_photo?.medium_url;
-    if (photo && !_usedPhotoUrls.has(photo)) { _usedPhotoUrls.add(photo); el.innerHTML = `<img src="${photo}" alt="">`; }
+    const candidates = (d.results || []).map(res => res.taxon?.default_photo?.medium_url).filter(Boolean);
+    const photo = candidates.find(c => !_usedPhotoUrls.has(c)) || candidates[0];
+    if (photo) { _usedPhotoUrls.add(photo); el.innerHTML = `<img src="${photo}" alt="">`; }
   } catch {}
 }
 
@@ -685,6 +686,6 @@ async function onMapClick(e) {
 }
 </script>
 <script src="engine.js?v=6.07"></script>
-<script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'v6.14';</script>
+<script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'v6.15';</script>
 </body>
 </html>
