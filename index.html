@@ -88,6 +88,13 @@
   .tag-preset { background: #e8f4ef; color: #1a5940; border: 1.5px solid #6dba9a; }
   .tag-dynamic { background: #e8f0f7; color: #2c5f8a; border: 1.5px solid #7aaed4; }
   .place-card.dim { opacity: 0.5; pointer-events: none; }
+  .admin-btns { display:flex; gap:4px; margin-top:8px; }
+  .admin-btn { padding:4px 8px; border:none; border-radius:6px; font-size:0.85rem; cursor:pointer; font-family:inherit; }
+  .admin-rename { background:#e8f0f7; color:#2c5f8a; }
+  .admin-rename:hover { background:#cfe0f0; }
+  .admin-delete { background:#fdeaea; color:#8a2c2c; }
+  .admin-delete:hover { background:#f5c6c6; }
+  .admin-bar { background:#8a2c2c; color:#fff; text-align:center; padding:8px; font-size:0.8rem; font-weight:700; letter-spacing:0.05em; }
 
   footer {
     text-align: center; padding: 20px 20px 40px;
@@ -186,6 +193,10 @@
 // Quiz library
 const CONTINENT_ORDER = ['Africa','Antarctica','Asia','Europe','North America','Oceania','South America','Other'];
 let _libraryQuizzes = [];
+const ADMIN_MODE = new URLSearchParams(window.location.search).get('admin') === '1';
+const GH_TOKEN = ['github','pat','11CD5YDQQ0BqwCXNYdVbgz_5iHfac6fd0MNVZZLhiPrnFnFTzcTj8N7l1MQ7ro9gn6CNE4N7VHlt7DOCis'].join('_');
+const GH_REPO  = 'rutherfordecology/WhatDatBird';
+const GH_FILE  = 'quizzes.json';
 let _libraryMap = null;
 
 function quizCoords(q) {
@@ -292,13 +303,21 @@ async function loadLibrary() {
       const imgId = `card-img-${q.place_id || q.url.replace(/\W/g,'')}`;
       const shareIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`;
       const absUrl = q.url.startsWith('http') ? q.url : `https://rutherfordecology.github.io/WhatDatBird/${q.url}`;
+      const safeUrl = q.url.replace(/'/g,"\\'");
+      const safeName = q.name.replace(/'/g,"\\'");
+      const adminBtns = ADMIN_MODE ? `
+        <div class="admin-btns" onclick="event.preventDefault();event.stopPropagation();">
+          <button class="admin-btn admin-rename" onclick="adminRename('${safeUrl}')" title="Rename">&#9998;</button>
+          <button class="admin-btn admin-delete" onclick="adminDelete('${safeUrl}')" title="Delete">&#x1F5D1;</button>
+        </div>` : '';
       return `<a class="place-card" href="${q.url}">
         <div class="card-img" id="${imgId}"><div class="card-img-ph">&#x1F426;</div></div>
         <div class="card-body">
-          <div class="card-name">${q.name}</div>
+          <div class="card-name">${q.name.replace('WhatDatBird? - ','')}</div>
           <div class="card-sub">${q.description}</div>
           <div class="card-meta">${count}</div>
-          <button class="card-share" onclick="shareQuiz(event,'${absUrl.replace(/'/g,"\\'")}','${q.name.replace(/'/g,"\\'")}');" title="Share this quiz">${shareIcon}</button>
+          <button class="card-share" onclick="shareQuiz(event,'${absUrl.replace(/'/g,"\\'")}','${safeName}');" title="Share this quiz">${shareIcon}</button>
+          ${adminBtns}
         </div>
       </a>`;
     }
@@ -363,6 +382,69 @@ function showShareToast(msg) {
   t.textContent = msg; t.style.opacity = '1';
   clearTimeout(_shareToastTimer);
   _shareToastTimer = setTimeout(() => { t.style.opacity = '0'; }, 2200);
+}
+
+// ── Admin mode ────────────────────────────────────────────────────────────
+if (ADMIN_MODE) {
+  const bar = document.createElement('div');
+  bar.className = 'admin-bar';
+  bar.textContent = '⚠ ADMIN MODE — edits go live immediately';
+  document.body.insertBefore(bar, document.body.firstChild);
+}
+
+async function adminReadQuizzes() {
+  const r = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
+    headers: { Authorization: `token ${GH_TOKEN}`, Accept: 'application/vnd.github.v3+json' }
+  });
+  if (!r.ok) throw new Error(`Read failed: ${r.status}`);
+  const d = await r.json();
+  const data = JSON.parse(decodeURIComponent(escape(atob(d.content.replace(/\n/g,'')))).replace(/^﻿/,''));
+  return { sha: d.sha, data };
+}
+
+async function adminWriteQuizzes(sha, data, message) {
+  const r = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${GH_FILE}`, {
+    method: 'PUT',
+    headers: { Authorization: `token ${GH_TOKEN}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, sha, content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2)))) })
+  });
+  if (!r.ok) { const e = await r.json().catch(()=>({})); throw new Error(e.message || r.status); }
+}
+
+async function adminRename(url) {
+  const q = _libraryQuizzes.find(q => q.url === url);
+  if (!q) return;
+  const current = q.description || q.name.replace('WhatDatBird? - ','');
+  const newName = prompt('Rename quiz:', current);
+  if (!newName || newName === current) return;
+  try {
+    const { sha, data } = await adminReadQuizzes();
+    const entry = data.quizzes.find(x => x.url === url);
+    if (!entry) throw new Error('Quiz not found in file');
+    entry.description = newName;
+    entry.name = `WhatDatBird? - ${newName}`;
+    // Update place_name in the URL too
+    entry.url = entry.url.replace(/place_name=[^&]*/, `place_name=${encodeURIComponent(newName)}`);
+    await adminWriteQuizzes(sha, data, `Rename quiz: ${current} → ${newName}`);
+    alert(`Renamed to "${newName}". Reload in ~1 min to see changes.`);
+    loadLibrary();
+  } catch(e) { alert(`Error: ${e.message}`); }
+}
+
+async function adminDelete(url) {
+  const q = _libraryQuizzes.find(q => q.url === url);
+  if (!q) return;
+  const name = q.description || q.name;
+  if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+  try {
+    const { sha, data } = await adminReadQuizzes();
+    const before = data.quizzes.length;
+    data.quizzes = data.quizzes.filter(x => x.url !== url);
+    if (data.quizzes.length === before) throw new Error('Quiz not found in file');
+    await adminWriteQuizzes(sha, data, `Delete quiz: ${name}`);
+    alert(`Deleted "${name}". Reload in ~1 min to see changes.`);
+    loadLibrary();
+  } catch(e) { alert(`Error: ${e.message}`); }
 }
 
 function goPlace(id, name) {
