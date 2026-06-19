@@ -525,7 +525,7 @@ function renderPlaceList(places, coordOption) {
     <div class="map-place-item map-place-coord" data-lat="${coordOption._lat}" data-lng="${coordOption._lng}" data-name="${coordOption.display_name}" data-cc="${coordOption._countryCode || ''}">
       <div>
         <div class="map-place-name">&#x1F4CD; ${coordOption.display_name}</div>
-        <div class="map-place-type" id="coordSubtitle">Starting ~6km · expands until 25+ species found</div>
+        <div class="map-place-type" id="coordSubtitle">Starting ~100m · expands until 25+ species found</div>
       </div>
       <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
     </div>` : '';
@@ -553,13 +553,13 @@ function attachPlaceListeners() {
       placesEl.querySelectorAll('.map-place-item').forEach(x => x.classList.remove('active'));
       el.classList.add('active');
       const clat = parseFloat(el.dataset.lat), clng = parseFloat(el.dataset.lng);
-      const pad = 0.05;
+      const pad = 0.0009; // ~100m starting square; expands dynamically when quiz loads
       clearBoundary();
       if (pickMap) {
         boundaryLayer = L.rectangle([[clat - pad, clng - pad],[clat + pad, clng + pad]], {
           color: '#1a5940', weight: 2.5, fillColor: '#2a7a58', fillOpacity: 0.15
         }).addTo(pickMap);
-        try { pickMap.flyToBounds(boundaryLayer.getBounds(), { duration: 0.6, maxZoom: 13 }); } catch {}
+        try { pickMap.flyToBounds(boundaryLayer.getBounds(), { padding: [60, 60], maxZoom: 17 }); } catch {}
       }
     });
     el.addEventListener('click', () => goCoords(
