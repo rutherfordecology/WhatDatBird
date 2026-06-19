@@ -451,7 +451,8 @@ function goPlace(id, name) {
   window.location.href = `quiz.html?place_id=${id}&place_name=${encodeURIComponent(name)}`;
 }
 function goCoords(lat, lng, name, countryCode) {
-  let url = `quiz.html?lat=${lat.toFixed(5)}&lng=${lng.toFixed(5)}&place_name=${encodeURIComponent(name)}`;
+  const label = prompt('What do you want to call this quiz?', name) ?? name;
+  let url = `quiz.html?lat=${lat.toFixed(5)}&lng=${lng.toFixed(5)}&place_name=${encodeURIComponent(label.trim() || name)}`;
   if (countryCode) url += `&country_code=${countryCode}`;
   window.location.href = url;
 }
