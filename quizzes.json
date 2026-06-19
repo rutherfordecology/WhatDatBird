@@ -332,6 +332,21 @@
       "lat": 56.17251,
       "lng": 14.90845,
       "added": "2026-06-11"
+    },
+    {
+      "name": "WhatDatBird? - Nukuhou Saltmarsh",
+      "continent": "Oceania",
+      "country": "New Zealand",
+      "description": "Nukuhou Saltmarsh",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-38.0205&lng=177.09894&place_name=Birds%20near%20this%20location&country_code=NZ",
+      "coord_lat": -38.0205,
+      "coord_lng": 177.09894,
+      "photo_taxon": "Haematopus unicolor",
+      "lat": -38.0205,
+      "lng": 177.09894,
+      "added": "2026-06-19"
     }
   ]
 }
