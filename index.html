@@ -292,16 +292,19 @@ async function loadLibrary() {
       </a>`;
     }
 
-    for (const q of quizzes) {
-      const imgId = `card-img-${q.place_id || q.url.replace(/\W/g,'')}`;
-      const el = document.getElementById(imgId);
-      if (!el) continue;
-      if (q.photo_taxon) {
-        loadTaxonPhoto(q.photo_taxon, el);
-      } else if (q.place_id) {
-        loadPlacePhoto(q.place_id, el);
+    (async () => {
+      for (const q of quizzes) {
+        const imgId = `card-img-${q.place_id || q.url.replace(/\W/g,'')}`;
+        const el = document.getElementById(imgId);
+        if (!el) continue;
+        if (q.photo_taxon) {
+          await loadTaxonPhoto(q.photo_taxon, el);
+        } else if (q.place_id) {
+          await loadPlacePhoto(q.place_id, el);
+        }
+        await new Promise(res => setTimeout(res, 150));
       }
-    }
+    })();
   } catch(e) {
     document.getElementById('quizLibrary').innerHTML =
       '<div class="section-label" style="max-width:640px;margin:0 auto 14px;padding:0 20px;color:#d47a7a">Could not load quiz library.</div>';
@@ -686,6 +689,6 @@ async function onMapClick(e) {
 }
 </script>
 <script src="engine.js?v=6.07"></script>
-<script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'v6.15';</script>
+<script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'v6.16';</script>
 </body>
 </html>
