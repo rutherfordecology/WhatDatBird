@@ -1,7 +1,7 @@
 // WhatDatBird? Quiz Engine v5.63
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v5.97';
+const APP_VERSION = 'v5.98';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -1477,7 +1477,7 @@ async function saveToLibrary() {
     description: quizLabel,
     species:     null,
     type:        'dynamic',
-    url:         `quiz.html?place_id=${CFG.placeId}&place_name=${encodeURIComponent(CFG.placeName)}`,
+    url:         `quiz.html?place_id=${CFG.placeId}&place_name=${encodeURIComponent(quizLabel)}`,
     place_id:    Number(CFG.placeId),
     photo_taxon: photoTaxon,
     lat,
@@ -1490,7 +1490,7 @@ async function saveToLibrary() {
     description: quizLabel,
     species:     null,
     type:        'dynamic',
-    url:         `quiz.html?lat=${CFG.coordLat}&lng=${CFG.coordLng}&place_name=${encodeURIComponent(CFG.placeName)}${CFG.coordCC ? '&country_code='+CFG.coordCC : ''}`,
+    url:         `quiz.html?lat=${CFG.coordLat}&lng=${CFG.coordLng}&place_name=${encodeURIComponent(quizLabel)}${CFG.coordCC ? '&country_code='+CFG.coordCC : ''}`,
     coord_lat:   CFG.coordLat,
     coord_lng:   CFG.coordLng,
     photo_taxon: photoTaxon,
