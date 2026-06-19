@@ -435,6 +435,20 @@
       "lat": 27.165184099999998,
       "lng": 77.5265628,
       "added": "2026-06-19"
+    },
+    {
+      "name": "WhatDatBird? - Dakota County, US, MN",
+      "continent": "Other",
+      "country": "Dakota County, US, MN",
+      "description": "Dakota County, US, MN",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?place_id=13394&place_name=Dakota%20County%2C%20US%2C%20MN",
+      "place_id": 13394,
+      "photo_taxon": null,
+      "lat": 44.6718867495,
+      "lng": -93.065434927,
+      "added": "2026-06-19"
     }
   ]
 }
