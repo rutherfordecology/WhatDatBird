@@ -380,8 +380,8 @@
     },
     {
       "name": "WhatDatBird? - Birds near Jangsong-rodongjagu, North Korea",
-      "continent": "Other",
-      "country": "Birds near Jangsong-rodongjagu, North Korea",
+      "continent": "Asia",
+      "country": "North Korea",
       "description": "Birds near Jangsong-rodongjagu, North Korea",
       "species": null,
       "type": "dynamic",
@@ -395,8 +395,8 @@
     },
     {
       "name": "WhatDatBird? - Montgomery County, US, OH",
-      "continent": "Other",
-      "country": "Montgomery County, US, OH",
+      "continent": "North America",
+      "country": "United States",
       "description": "Montgomery County, US, OH",
       "species": null,
       "type": "dynamic",
@@ -409,8 +409,8 @@
     },
     {
       "name": "WhatDatBird? - Omaha, NE Metro Area",
-      "continent": "Other",
-      "country": "Omaha, NE Metro Area",
+      "continent": "North America",
+      "country": "United States",
       "description": "Omaha, NE Metro Area",
       "species": null,
       "type": "dynamic",

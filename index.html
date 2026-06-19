@@ -163,6 +163,29 @@
 <script>
 // Quiz library
 const CONTINENT_ORDER = ['Africa','Antarctica','Asia','Europe','North America','Oceania','South America','Other'];
+
+const CC_TO_CONTINENT = {
+  AF:'Asia',AM:'Asia',AZ:'Asia',BH:'Asia',BD:'Asia',BT:'Asia',BN:'Asia',KH:'Asia',CN:'Asia',CY:'Asia',GE:'Asia',IN:'Asia',ID:'Asia',IR:'Asia',IQ:'Asia',IL:'Asia',JP:'Asia',JO:'Asia',KZ:'Asia',KW:'Asia',KG:'Asia',LA:'Asia',LB:'Asia',MY:'Asia',MV:'Asia',MN:'Asia',MM:'Asia',NP:'Asia',KP:'Asia',OM:'Asia',PK:'Asia',PH:'Asia',QA:'Asia',SA:'Asia',SG:'Asia',LK:'Asia',SY:'Asia',TW:'Asia',TJ:'Asia',TH:'Asia',TL:'Asia',TR:'Asia',TM:'Asia',AE:'Asia',UZ:'Asia',VN:'Asia',YE:'Asia',
+  AL:'Europe',AD:'Europe',AT:'Europe',BY:'Europe',BE:'Europe',BA:'Europe',BG:'Europe',HR:'Europe',CZ:'Europe',DK:'Europe',EE:'Europe',FI:'Europe',FR:'Europe',DE:'Europe',GR:'Europe',HU:'Europe',IS:'Europe',IE:'Europe',IT:'Europe',XK:'Europe',LV:'Europe',LI:'Europe',LT:'Europe',LU:'Europe',MT:'Europe',MD:'Europe',MC:'Europe',ME:'Europe',NL:'Europe',MK:'Europe',NO:'Europe',PL:'Europe',PT:'Europe',RO:'Europe',RU:'Europe',SM:'Europe',RS:'Europe',SK:'Europe',SI:'Europe',ES:'Europe',SE:'Europe',CH:'Europe',UA:'Europe',GB:'Europe',VA:'Europe',
+  DZ:'Africa',AO:'Africa',BJ:'Africa',BW:'Africa',BF:'Africa',BI:'Africa',CV:'Africa',CM:'Africa',CF:'Africa',TD:'Africa',KM:'Africa',CG:'Africa',CD:'Africa',CI:'Africa',DJ:'Africa',EG:'Africa',GQ:'Africa',ER:'Africa',SZ:'Africa',ET:'Africa',GA:'Africa',GM:'Africa',GH:'Africa',GN:'Africa',GW:'Africa',KE:'Africa',LS:'Africa',LR:'Africa',LY:'Africa',MG:'Africa',MW:'Africa',ML:'Africa',MR:'Africa',MU:'Africa',MA:'Africa',MZ:'Africa',NA:'Africa',NE:'Africa',NG:'Africa',RW:'Africa',ST:'Africa',SN:'Africa',SL:'Africa',SO:'Africa',ZA:'Africa',SS:'Africa',SD:'Africa',TZ:'Africa',TG:'Africa',TN:'Africa',UG:'Africa',ZM:'Africa',ZW:'Africa',
+  AG:'North America',BS:'North America',BB:'North America',BZ:'North America',CA:'North America',CR:'North America',CU:'North America',DM:'North America',DO:'North America',SV:'North America',GD:'North America',GT:'North America',HT:'North America',HN:'North America',JM:'North America',MX:'North America',NI:'North America',PA:'North America',KN:'North America',LC:'North America',VC:'North America',TT:'North America',US:'North America',
+  AR:'South America',BO:'South America',BR:'South America',CL:'South America',CO:'South America',EC:'South America',GY:'South America',PY:'South America',PE:'South America',SR:'South America',UY:'South America',VE:'South America',
+  AU:'Oceania',FJ:'Oceania',KI:'Oceania',MH:'Oceania',FM:'Oceania',NR:'Oceania',NZ:'Oceania',PW:'Oceania',PG:'Oceania',WS:'Oceania',SB:'Oceania',TO:'Oceania',TV:'Oceania',VU:'Oceania',
+  AQ:'Antarctica',
+};
+const CC_TO_COUNTRY = {
+  AF:'Afghanistan',AM:'Armenia',AZ:'Azerbaijan',BH:'Bahrain',BD:'Bangladesh',BT:'Bhutan',BN:'Brunei',KH:'Cambodia',CN:'China',CY:'Cyprus',GE:'Georgia',IN:'India',ID:'Indonesia',IR:'Iran',IQ:'Iraq',IL:'Israel',JP:'Japan',JO:'Jordan',KZ:'Kazakhstan',KW:'Kuwait',KG:'Kyrgyzstan',LA:'Laos',LB:'Lebanon',MY:'Malaysia',MV:'Maldives',MN:'Mongolia',MM:'Myanmar',NP:'Nepal',KP:'North Korea',OM:'Oman',PK:'Pakistan',PH:'Philippines',QA:'Qatar',SA:'Saudi Arabia',SG:'Singapore',LK:'Sri Lanka',SY:'Syria',TW:'Taiwan',TJ:'Tajikistan',TH:'Thailand',TL:'Timor-Leste',TR:'Turkey',TM:'Turkmenistan',AE:'United Arab Emirates',UZ:'Uzbekistan',VN:'Vietnam',YE:'Yemen',
+  AL:'Albania',AD:'Andorra',AT:'Austria',BY:'Belarus',BE:'Belgium',BA:'Bosnia and Herzegovina',BG:'Bulgaria',HR:'Croatia',CZ:'Czech Republic',DK:'Denmark',EE:'Estonia',FI:'Finland',FR:'France',DE:'Germany',GR:'Greece',HU:'Hungary',IS:'Iceland',IE:'Ireland',IT:'Italy',XK:'Kosovo',LV:'Latvia',LI:'Liechtenstein',LT:'Lithuania',LU:'Luxembourg',MT:'Malta',MD:'Moldova',MC:'Monaco',ME:'Montenegro',NL:'Netherlands',MK:'North Macedonia',NO:'Norway',PL:'Poland',PT:'Portugal',RO:'Romania',RU:'Russia',SM:'San Marino',RS:'Serbia',SK:'Slovakia',SI:'Slovenia',ES:'Spain',SE:'Sweden',CH:'Switzerland',UA:'Ukraine',GB:'United Kingdom',VA:'Vatican City',
+  DZ:'Algeria',AO:'Angola',BJ:'Benin',BW:'Botswana',BF:'Burkina Faso',BI:'Burundi',CV:'Cape Verde',CM:'Cameroon',CF:'Central African Republic',TD:'Chad',KM:'Comoros',CG:'Republic of the Congo',CD:'DR Congo',CI:"Côte d'Ivoire",DJ:'Djibouti',EG:'Egypt',GQ:'Equatorial Guinea',ER:'Eritrea',SZ:'Eswatini',ET:'Ethiopia',GA:'Gabon',GM:'Gambia',GH:'Ghana',GN:'Guinea',GW:'Guinea-Bissau',KE:'Kenya',LS:'Lesotho',LR:'Liberia',LY:'Libya',MG:'Madagascar',MW:'Malawi',ML:'Mali',MR:'Mauritania',MU:'Mauritius',MA:'Morocco',MZ:'Mozambique',NA:'Namibia',NE:'Niger',NG:'Nigeria',RW:'Rwanda',ST:'São Tomé and Príncipe',SN:'Senegal',SL:'Sierra Leone',SO:'Somalia',ZA:'South Africa',SS:'South Sudan',SD:'Sudan',TZ:'Tanzania',TG:'Togo',TN:'Tunisia',UG:'Uganda',ZM:'Zambia',ZW:'Zimbabwe',
+  AG:'Antigua and Barbuda',BS:'Bahamas',BB:'Barbados',BZ:'Belize',CA:'Canada',CR:'Costa Rica',CU:'Cuba',DM:'Dominica',DO:'Dominican Republic',SV:'El Salvador',GD:'Grenada',GT:'Guatemala',HT:'Haiti',HN:'Honduras',JM:'Jamaica',MX:'Mexico',NI:'Nicaragua',PA:'Panama',KN:'Saint Kitts and Nevis',LC:'Saint Lucia',VC:'Saint Vincent and the Grenadines',TT:'Trinidad and Tobago',US:'United States',
+  AR:'Argentina',BO:'Bolivia',BR:'Brazil',CL:'Chile',CO:'Colombia',EC:'Ecuador',GY:'Guyana',PY:'Paraguay',PE:'Peru',SR:'Suriname',UY:'Uruguay',VE:'Venezuela',
+  AU:'Australia',FJ:'Fiji',KI:'Kiribati',MH:'Marshall Islands',FM:'Micronesia',NR:'Nauru',NZ:'New Zealand',PW:'Palau',PG:'Papua New Guinea',WS:'Samoa',SB:'Solomon Islands',TO:'Tonga',TV:'Tuvalu',VU:'Vanuatu',
+  AQ:'Antarctica',
+};
+
+function ccFromUrl(url) {
+  try { return new URL(url, location.href).searchParams.get('country_code'); } catch { return null; }
+}
 let _libraryQuizzes = [];
 const ADMIN_MODE = new URLSearchParams(window.location.search).get('admin') === '1';
 const GH_TOKEN = ['github','pat','11CD5YDQQ0BqwCXNYdVbgz_5iHfac6fd0MNVZZLhiPrnFnFTzcTj8N7l1MQ7ro9gn6CNE4N7VHlt7DOCis'].join('_');
@@ -198,6 +221,14 @@ async function loadLibrary() {
     const r = await fetch(`./quizzes.json?_=${Date.now()}`);
     const d = await r.json();
     const quizzes = d.quizzes || [];
+
+    for (const q of quizzes) {
+      const cc = ccFromUrl(q.url);
+      if (cc) {
+        if (!q.continent || q.continent === 'Other') q.continent = CC_TO_CONTINENT[cc] || 'Other';
+        if (!q.country || q.country === q.description) q.country = CC_TO_COUNTRY[cc] || q.country;
+      }
+    }
 
     const groups = {};
     for (const q of quizzes) {
