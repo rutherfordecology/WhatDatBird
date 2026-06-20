@@ -464,6 +464,20 @@
       "lat": -5.0002876,
       "lng": 38.686293899999995,
       "added": "2026-06-20"
+    },
+    {
+      "name": "WhatDatBird? - UKCEH Lancaster, England, GB",
+      "continent": "Other",
+      "country": "UKCEH Lancaster, England, GB",
+      "description": "UKCEH Lancaster, England, GB",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?place_id=218629&place_name=UKCEH%20Lancaster%2C%20England%2C%20GB",
+      "place_id": 218629,
+      "photo_taxon": null,
+      "lat": 54.009990121,
+      "lng": -2.7885613885,
+      "added": "2026-06-20"
     }
   ]
 }
