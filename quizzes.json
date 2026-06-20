@@ -478,6 +478,20 @@
       "lat": 54.009990121,
       "lng": -2.7885613885,
       "added": "2026-06-20"
+    },
+    {
+      "name": "WhatDatBird? - Greater Vancouver, CA, BC",
+      "continent": "Other",
+      "country": "Greater Vancouver, CA, BC",
+      "description": "Greater Vancouver, CA, BC",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?place_id=27530&place_name=Greater%20Vancouver%2C%20CA%2C%20BC",
+      "place_id": 27530,
+      "photo_taxon": null,
+      "lat": 49.2702552818,
+      "lng": -122.8992685499,
+      "added": "2026-06-20"
     }
   ]
 }
