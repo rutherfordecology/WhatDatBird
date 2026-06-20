@@ -1,7 +1,7 @@
-// WhatDatBird? Quiz Engine v6.06
+// WhatDatBird? Quiz Engine v6.07
 // Shared engine for all quiz pages.
 // Each page calls: initEngine(config)
-const APP_VERSION = 'v6.06';
+const APP_VERSION = 'v6.07';
 window.__engineLoaded = true;
 
 // ── Config ────────────────────────────────────────────────────────────────
@@ -42,6 +42,41 @@ const ISO_TO_COUNTRY = {
   'ZW':'Zimbabwe','FJ':'Fiji','PG':'Papua New Guinea','SB':'Solomon Islands',
   'TO':'Tonga','VU':'Vanuatu','KI':'Kiribati','MH':'Marshall Islands',
   'FM':'Micronesia','NR':'Nauru','PW':'Palau','TV':'Tuvalu',
+};
+const COUNTRY_CONTINENT = {
+  'United States':'North America','Canada':'North America','Mexico':'North America',
+  'Guatemala':'North America','Cuba':'North America','Jamaica':'North America',
+  'Costa Rica':'North America','Panama':'North America','Honduras':'North America',
+  'Nicaragua':'North America','El Salvador':'North America','Belize':'North America',
+  'Dominican Republic':'North America','Haiti':'North America','Puerto Rico':'North America',
+  'Trinidad and Tobago':'North America','Barbados':'North America','Bahamas':'North America',
+  'Brazil':'South America','Argentina':'South America','Colombia':'South America',
+  'Peru':'South America','Venezuela':'South America','Chile':'South America',
+  'Ecuador':'South America','Bolivia':'South America','Paraguay':'South America',
+  'Uruguay':'South America','Guyana':'South America','Suriname':'South America',
+  'United Kingdom':'Europe','France':'Europe','Germany':'Europe','Spain':'Europe',
+  'Italy':'Europe','Portugal':'Europe','Netherlands':'Europe','Belgium':'Europe',
+  'Switzerland':'Europe','Austria':'Europe','Sweden':'Europe','Norway':'Europe',
+  'Denmark':'Europe','Finland':'Europe','Poland':'Europe','Czech Republic':'Europe',
+  'Hungary':'Europe','Romania':'Europe','Greece':'Europe','Ireland':'Europe',
+  'Croatia':'Europe','Slovakia':'Europe','Bulgaria':'Europe','Serbia':'Europe',
+  'Russia':'Europe','Ukraine':'Europe','Iceland':'Europe',
+  'Australia':'Oceania','New Zealand':'Oceania','Papua New Guinea':'Oceania',
+  'Fiji':'Oceania','Samoa':'Oceania','American Samoa':'Oceania','Tonga':'Oceania',
+  'Vanuatu':'Oceania','Solomon Islands':'Oceania','Palau':'Oceania',
+  'Kiribati':'Oceania','Micronesia':'Oceania','Marshall Islands':'Oceania',
+  'Nauru':'Oceania','Tuvalu':'Oceania','New Caledonia':'Oceania',
+  'French Polynesia':'Oceania','Hawaii':'North America',
+  'China':'Asia','Japan':'Asia','India':'Asia','Indonesia':'Asia','Philippines':'Asia',
+  'Vietnam':'Asia','Thailand':'Asia','Malaysia':'Asia','South Korea':'Asia',
+  'Taiwan':'Asia','Myanmar':'Asia','Cambodia':'Asia','Nepal':'Asia','Sri Lanka':'Asia',
+  'Singapore':'Asia','Bangladesh':'Asia','Pakistan':'Asia','Mongolia':'Asia',
+  'Kazakhstan':'Asia',
+  'South Africa':'Africa','Kenya':'Africa','Tanzania':'Africa','Ethiopia':'Africa',
+  'Uganda':'Africa','Ghana':'Africa','Nigeria':'Africa','Cameroon':'Africa',
+  'Senegal':'Africa','Madagascar':'Africa','Zambia':'Africa','Zimbabwe':'Africa',
+  'Botswana':'Africa','Mozambique':'Africa','Morocco':'Africa','Egypt':'Africa',
+  'Rwanda':'Africa','Malawi':'Africa',
 };
 function expandPlaceName(name) {
   // Replace trailing ISO code(s): "Nakaseke, LW, UG" → "Nakaseke, Uganda"
@@ -1393,14 +1428,6 @@ async function saveToLibrary() {
     if (CFG.coordCC && ISO_TO_COUNTRY[CFG.coordCC]) {
       country = ISO_TO_COUNTRY[CFG.coordCC];
     }
-    const COUNTRY_CONTINENT = {
-      'United States':'North America','Canada':'North America','Mexico':'North America','Guatemala':'North America','Cuba':'North America','Costa Rica':'North America','Panama':'North America','Honduras':'North America','Nicaragua':'North America','El Salvador':'North America','Dominican Republic':'North America','Haiti':'North America','Trinidad and Tobago':'North America',
-      'Brazil':'South America','Argentina':'South America','Colombia':'South America','Peru':'South America','Venezuela':'South America','Chile':'South America','Ecuador':'South America','Bolivia':'South America','Paraguay':'South America','Uruguay':'South America','Guyana':'South America',
-      'United Kingdom':'Europe','France':'Europe','Germany':'Europe','Spain':'Europe','Italy':'Europe','Portugal':'Europe','Netherlands':'Europe','Belgium':'Europe','Switzerland':'Europe','Austria':'Europe','Sweden':'Europe','Norway':'Europe','Denmark':'Europe','Finland':'Europe','Poland':'Europe','Czech Republic':'Europe','Hungary':'Europe','Romania':'Europe','Greece':'Europe','Ireland':'Europe','Croatia':'Europe','Bulgaria':'Europe','Serbia':'Europe','Russia':'Europe','Ukraine':'Europe','Iceland':'Europe',
-      'Australia':'Oceania','New Zealand':'Oceania','Papua New Guinea':'Oceania','Fiji':'Oceania','Samoa':'Oceania','Tonga':'Oceania','Vanuatu':'Oceania','Solomon Islands':'Oceania','New Caledonia':'Oceania','French Polynesia':'Oceania',
-      'China':'Asia','Japan':'Asia','India':'Asia','Indonesia':'Asia','Philippines':'Asia','Vietnam':'Asia','Thailand':'Asia','Malaysia':'Asia','South Korea':'Asia','Taiwan':'Asia','Myanmar':'Asia','Cambodia':'Asia','Nepal':'Asia','Sri Lanka':'Asia','Singapore':'Asia','Bangladesh':'Asia','Pakistan':'Asia','Mongolia':'Asia','Kazakhstan':'Asia',
-      'South Africa':'Africa','Kenya':'Africa','Tanzania':'Africa','Ethiopia':'Africa','Uganda':'Africa','Ghana':'Africa','Nigeria':'Africa','Cameroon':'Africa','Senegal':'Africa','Madagascar':'Africa','Zambia':'Africa','Zimbabwe':'Africa','Botswana':'Africa','Mozambique':'Africa','Morocco':'Africa','Egypt':'Africa','Rwanda':'Africa','Malawi':'Africa',
-    };
     continent = COUNTRY_CONTINENT[country] || 'Other';
     // Get a photo from iNat by coords
     try {
@@ -1426,51 +1453,16 @@ async function saveToLibrary() {
       country   = ancs.find(a => a.place_type === 12)?.display_name
                || ancs.find(a => a.place_type === 2)?.display_name
                || CFG.placeName;
-      // If country detection failed, extract ISO code from place name e.g. "Rotorua, BP, NZ" → "New Zealand"
-      if (country === CFG.placeName) {
-        const isoMatch = CFG.placeName.match(/,\s*([A-Z]{2,3})(?:,\s*[A-Z]{2})?$/);
-        const code = isoMatch?.[1];
-        if (code && ISO_TO_COUNTRY[code]) country = ISO_TO_COUNTRY[code];
-      }
-      // Fallback: derive continent from country if iNat ancestor missing
-      if (!continent) {
-        const COUNTRY_CONTINENT = {
-          'United States':'North America','Canada':'North America','Mexico':'North America',
-          'Guatemala':'North America','Cuba':'North America','Jamaica':'North America',
-          'Costa Rica':'North America','Panama':'North America','Honduras':'North America',
-          'Nicaragua':'North America','El Salvador':'North America','Belize':'North America',
-          'Dominican Republic':'North America','Haiti':'North America','Puerto Rico':'North America',
-          'Trinidad and Tobago':'North America','Barbados':'North America','Bahamas':'North America',
-          'Brazil':'South America','Argentina':'South America','Colombia':'South America',
-          'Peru':'South America','Venezuela':'South America','Chile':'South America',
-          'Ecuador':'South America','Bolivia':'South America','Paraguay':'South America',
-          'Uruguay':'South America','Guyana':'South America','Suriname':'South America',
-          'United Kingdom':'Europe','France':'Europe','Germany':'Europe','Spain':'Europe',
-          'Italy':'Europe','Portugal':'Europe','Netherlands':'Europe','Belgium':'Europe',
-          'Switzerland':'Europe','Austria':'Europe','Sweden':'Europe','Norway':'Europe',
-          'Denmark':'Europe','Finland':'Europe','Poland':'Europe','Czech Republic':'Europe',
-          'Hungary':'Europe','Romania':'Europe','Greece':'Europe','Ireland':'Europe',
-          'Croatia':'Europe','Slovakia':'Europe','Bulgaria':'Europe','Serbia':'Europe',
-          'Russia':'Europe','Ukraine':'Europe','Iceland':'Europe',
-          'Australia':'Oceania','New Zealand':'Oceania','Papua New Guinea':'Oceania',
-          'Fiji':'Oceania','Samoa':'Oceania','American Samoa':'Oceania','Tonga':'Oceania',
-          'Vanuatu':'Oceania','Solomon Islands':'Oceania','Palau':'Oceania',
-          'Kiribati':'Oceania','Micronesia':'Oceania','Marshall Islands':'Oceania',
-          'Nauru':'Oceania','Tuvalu':'Oceania','New Caledonia':'Oceania',
-          'French Polynesia':'Oceania','Hawaii':'North America',
-          'China':'Asia','Japan':'Asia','India':'Asia','Indonesia':'Asia','Philippines':'Asia',
-          'Vietnam':'Asia','Thailand':'Asia','Malaysia':'Asia','South Korea':'Asia',
-          'Taiwan':'Asia','Myanmar':'Asia','Cambodia':'Asia','Nepal':'Asia','Sri Lanka':'Asia',
-          'Singapore':'Asia','Bangladesh':'Asia','Pakistan':'Asia','Mongolia':'Asia',
-          'South Africa':'Africa','Kenya':'Africa','Tanzania':'Africa','Ethiopia':'Africa',
-          'Uganda':'Africa','Ghana':'Africa','Nigeria':'Africa','Cameroon':'Africa',
-          'Senegal':'Africa','Madagascar':'Africa','Zambia':'Africa','Zimbabwe':'Africa',
-          'Botswana':'Africa','Mozambique':'Africa','Morocco':'Africa','Egypt':'Africa',
-        };
-        continent = COUNTRY_CONTINENT[country] || COUNTRY_CONTINENT[CFG.placeName] || COUNTRY_CONTINENT[CFG.placeName?.split(',')[0]?.trim()] || 'Other';
-      }
     }
-    // Final safety net — catches country-level places where iNat has no continent ancestor
+    // If country detection failed (no ancestors, or ancestors had no country-level place),
+    // extract ISO code from place name e.g. "Rotorua, BP, NZ" → "New Zealand"
+    if (country === CFG.placeName) {
+      const isoMatch = CFG.placeName.match(/,\s*([A-Z]{2,3})(?:,\s*[A-Z]{2})?$/);
+      const code = isoMatch?.[1];
+      if (code && ISO_TO_COUNTRY[code]) country = ISO_TO_COUNTRY[code];
+    }
+    // Fallback/safety net — derive continent from country whenever iNat didn't give us one
+    // directly (missing ancestors, or no place_type 29 ancestor for this place)
     if (!continent || continent === 'Other') {
       continent = COUNTRY_CONTINENT[country] || COUNTRY_CONTINENT[CFG.placeName] || COUNTRY_CONTINENT[CFG.placeName?.split(',')[0]?.trim()] || 'Other';
     }

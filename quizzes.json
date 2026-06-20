@@ -438,8 +438,8 @@
     },
     {
       "name": "WhatDatBird? - Dakota County, US, MN",
-      "continent": "Other",
-      "country": "Dakota County, US, MN",
+      "continent": "North America",
+      "country": "United States",
       "description": "Dakota County, US, MN",
       "species": null,
       "type": "dynamic",
@@ -467,8 +467,8 @@
     },
     {
       "name": "WhatDatBird? - UKCEH Lancaster, England, GB",
-      "continent": "Other",
-      "country": "UKCEH Lancaster, England, GB",
+      "continent": "Europe",
+      "country": "United Kingdom",
       "description": "UKCEH Lancaster, England, GB",
       "species": null,
       "type": "dynamic",
@@ -481,8 +481,8 @@
     },
     {
       "name": "WhatDatBird? - Greater Vancouver, CA, BC",
-      "continent": "Other",
-      "country": "Greater Vancouver, CA, BC",
+      "continent": "North America",
+      "country": "Canada",
       "description": "Greater Vancouver, CA, BC",
       "species": null,
       "type": "dynamic",
