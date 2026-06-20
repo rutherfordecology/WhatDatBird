@@ -656,7 +656,8 @@ async function onMapClick(e) {
   }
 }
 </script>
-<script src="engine.js?v=6.18"></script>
-<script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : 'v6.18';</script>
+<script src="version.js"></script>
+<script>document.write('<script src="engine.js?v=' + (typeof APP_VERSION !== 'undefined' ? APP_VERSION : Date.now()) + '"><\/script>');</script>
+<script>document.getElementById('appVersion').textContent = typeof APP_VERSION !== 'undefined' ? APP_VERSION : '';</script>
 </body>
 </html>
