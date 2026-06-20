@@ -449,6 +449,21 @@
       "lat": 44.6718867495,
       "lng": -93.065434927,
       "added": "2026-06-19"
+    },
+    {
+      "name": "WhatDatBird? - East Usambara Mountains, Tanzania",
+      "continent": "Africa",
+      "country": "Tanzania",
+      "description": "East Usambara Mountains, Tanzania",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-5.0002876&lng=38.686293899999995&place_name=East%20Usambara%20Mountains%2C%20Tanzania&country_code=TZ",
+      "coord_lat": -5.0002876,
+      "coord_lng": 38.686293899999995,
+      "photo_taxon": "Bycanistes brevis",
+      "lat": -5.0002876,
+      "lng": 38.686293899999995,
+      "added": "2026-06-20"
     }
   ]
 }
