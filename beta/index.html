@@ -80,6 +80,7 @@
   .card-share svg { display: block; width: 18px; height: 18px; }
   .share-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a5940; color: #fff; padding: 10px 20px; border-radius: 10px; font-size: 0.85rem; font-weight: 700; pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 9999; }
   .card-count { font-size: 0.72rem; font-weight: 700; color: #2a7a58; }
+  .card-audio-tag { font-size: 0.7rem; font-weight: 800; color: #8a1f1f; }
   .tag { font-size: 0.6rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 20px; }
   .tag-preset { background: #e8f4ef; color: #1a5940; border: 1.5px solid #6dba9a; }
   .tag-dynamic { background: #e8f0f7; color: #2c5f8a; border: 1.5px solid #7aaed4; }
@@ -241,7 +242,9 @@ async function loadLibrary() {
     addQuizMarkers(quizzes);
 
     function cardHtml(q) {
+      const isAudio = /mode=audio/.test(q.url);
       const count = q.species ? `<span class="card-count">${q.species} species</span>` : '';
+      const audioTag = isAudio ? `<span class="card-audio-tag">&#128266; Audio</span>` : '';
       const imgId = `card-img-${q.place_id || q.url.replace(/\W/g,'')}`;
       const shareIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`;
       const absUrl = q.url.startsWith('http') ? q.url : `https://rutherfordecology.github.io/WhatDatBird/${q.url}`;
@@ -257,7 +260,7 @@ async function loadLibrary() {
         <div class="card-body">
           <div class="card-name">${q.name.replace('WhatDatBird? - ','')}</div>
           <div class="card-sub">${q.description}</div>
-          <div class="card-meta">${count}</div>
+          <div class="card-meta">${count}${audioTag}</div>
           <button class="card-share" onclick="shareQuiz(event,'${absUrl.replace(/'/g,"\\'")}','${safeName}');" title="Share this quiz">${shareIcon}</button>
           ${adminBtns}
         </div>
@@ -426,13 +429,22 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(pickMap);
 pickMap.on('click', onMapClick);
 
+const audioMarkerIcon = L.divIcon({
+  className: 'audio-marker-icon',
+  html: `<svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg"><path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z" fill="#8a1f1f" stroke="#5c1212" stroke-width="1"/><circle cx="12.5" cy="12.5" r="5.5" fill="#fff"/></svg>`,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+});
+
 async function addQuizMarkers(quizzes) {
   const coordPromises = quizzes.map(q => resolveQuizCoords(q).then(c => ({ q, c })));
   for (const p of coordPromises) {
     const { q, c } = await p;
     if (!c) continue;
     const label = q.description || q.name.replace('WhatDatBird? - ', '');
-    L.marker([c.lat, c.lng])
+    const isAudio = /mode=audio/.test(q.url);
+    L.marker([c.lat, c.lng], isAudio ? { icon: audioMarkerIcon } : {})
       .addTo(pickMap)
       .bindPopup(`<div style="font-family:system-ui,-apple-system,sans-serif;text-align:center;min-width:130px"><strong style="color:#1a5940;display:block;margin-bottom:6px">${label}</strong><a href="${q.url}" style="color:#1a5940;font-weight:800;text-decoration:none">Play this quiz &#8594;</a></div>`);
   }
