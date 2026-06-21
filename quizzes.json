@@ -496,10 +496,10 @@
       "added": "2026-06-20"
     },
     {
-      "name": "WhatDatBird? - Birds near The Forks, West Coast",
+      "name": "WhatDatBird? - Birds near The Forks, West Coast (Audio)",
       "continent": "Oceania",
       "country": "New Zealand",
-      "description": "Birds near The Forks, West Coast",
+      "description": "Birds near The Forks, West Coast (Audio)",
       "species": null,
       "type": "dynamic",
       "url": "quiz.html?lat=-43.25227&lng=170.2632&place_name=Birds%20near%20The%20Forks%2C%20West%20Coast&country_code=NZ&mode=audio",
@@ -511,10 +511,10 @@
       "added": "2026-06-21"
     },
     {
-      "name": "WhatDatBird? - Sisterson Lagoon",
+      "name": "WhatDatBird? - Sisterson Lagoon (Audio)",
       "continent": "Oceania",
       "country": "New Zealand",
-      "description": "Sisterson Lagoon",
+      "description": "Sisterson Lagoon (Audio)",
       "species": null,
       "type": "dynamic",
       "url": "quiz.html?lat=-38.6732&lng=177.95936&place_name=Sisterson%20Lagoon&country_code=NZ&mode=audio",

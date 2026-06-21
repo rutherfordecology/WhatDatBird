@@ -1615,6 +1615,7 @@ async function saveToLibrary() {
   const msg = document.getElementById('saveLibMsg');
   if (!CFG.placeId && !CFG.coordLat) return;
   const quizLabel = CFG.placeName;
+  const libraryLabel = CFG.audioOnly ? `${quizLabel} (Audio)` : quizLabel;
   const saveBtn = document.getElementById('saveLibBtn');
   if (saveBtn) saveBtn.disabled = true;
   msg.style.color = '#2a7a58';
@@ -1706,10 +1707,10 @@ async function saveToLibrary() {
   // 3. Write updated quizzes.json to GitHub
   msg.textContent = 'Saving...';
   const quizEntry = CFG.placeId ? {
-    name:        `WhatDatBird? - ${quizLabel}`,
+    name:        `WhatDatBird? - ${libraryLabel}`,
     continent,
     country,
-    description: quizLabel,
+    description: libraryLabel,
     species:     null,
     type:        'dynamic',
     url:         `quiz.html?place_id=${CFG.placeId}&place_name=${encodeURIComponent(quizLabel)}${CFG.audioOnly ? '&mode=audio' : ''}`,
@@ -1719,10 +1720,10 @@ async function saveToLibrary() {
     lng,
     added:       new Date().toISOString().split('T')[0],
   } : {
-    name:        `WhatDatBird? - ${quizLabel}`,
+    name:        `WhatDatBird? - ${libraryLabel}`,
     continent,
     country,
-    description: quizLabel,
+    description: libraryLabel,
     species:     null,
     type:        'dynamic',
     url:         `quiz.html?lat=${CFG.coordLat}&lng=${CFG.coordLng}&place_name=${encodeURIComponent(quizLabel)}${CFG.coordCC ? '&country_code='+CFG.coordCC : ''}${CFG.audioOnly ? '&mode=audio' : ''}`,

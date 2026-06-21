@@ -71,6 +71,10 @@
   .card-img { height: 150px; background: #eeede8; overflow: hidden; display: flex; align-items: center; justify-content: center; }
   .card-img img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
   .card-img-ph { font-size: 3rem; color: #c8c6bc; }
+  @media (max-width: 600px) {
+    .card-img { height: 50px; }
+    .card-img-ph { font-size: 1.6rem; }
+  }
   .card-body { padding: 14px 16px; position: relative; }
   .card-name { font-size: 1.1rem; font-weight: 900; color: #1a5940; margin-bottom: 3px; }
   .card-sub { font-size: 0.78rem; color: #6b6960; margin-bottom: 10px; line-height: 1.4; }
