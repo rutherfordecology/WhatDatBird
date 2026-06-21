@@ -115,6 +115,7 @@
   .map-place-name { font-size:0.9rem; font-weight:700; color:#1c1b18; }
   .map-place-type { font-size:0.72rem; color:#9b9890; margin-top:1px; }
   .map-place-go { font-size:0.75rem; font-weight:800; color:#2a7a58; white-space:nowrap; }
+  .map-place-actions { display:flex; flex-direction:column; align-items:flex-end; gap:5px; }
   .map-audio-toggle { display:flex; align-items:center; gap:5px; font-size:0.72rem; color:#5a584f; white-space:nowrap; cursor:pointer; }
   .map-audio-toggle input { cursor:pointer; }
 </style>
@@ -387,8 +388,10 @@ async function adminDelete(url) {
   } catch(e) { alert(`Error: ${e.message}`); }
 }
 
-function goPlace(id, name) {
-  window.location.href = `quiz.html?place_id=${id}&place_name=${encodeURIComponent(name)}`;
+function goPlace(id, name, audioOnly) {
+  let url = `quiz.html?place_id=${id}&place_name=${encodeURIComponent(name)}`;
+  if (audioOnly) url += `&mode=audio`;
+  window.location.href = url;
 }
 function goCoords(lat, lng, name, countryCode, audioOnly) {
   const label = prompt('What do you want to call this quiz?', name) ?? name;
@@ -545,7 +548,12 @@ function renderPlaceList(places, coordOption) {
         <div class="map-place-name">${p.display_name}</div>
         <div class="map-place-type">${TYPE_LABEL[p.place_type] || 'Place'}</div>
       </div>
-      <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
+      <div class="map-place-actions">
+        <label class="map-audio-toggle" onclick="event.stopPropagation()">
+          <input type="checkbox" class="audio-only-cb">&#128266; Audio only
+        </label>
+        <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
+      </div>
     </div>`).join('');
 
   const coordHtml = coordOption ? `
@@ -554,10 +562,12 @@ function renderPlaceList(places, coordOption) {
         <div class="map-place-name">&#x1F4CD; ${coordOption.display_name}</div>
         <div class="map-place-type" id="coordSubtitle">Starting ~100m · expands until 25+ species found</div>
       </div>
-      <label class="map-audio-toggle" onclick="event.stopPropagation()">
-        <input type="checkbox" id="coordAudioOnly">&#128266; Audio only
-      </label>
-      <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
+      <div class="map-place-actions">
+        <label class="map-audio-toggle" onclick="event.stopPropagation()">
+          <input type="checkbox" class="audio-only-cb">&#128266; Audio only
+        </label>
+        <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
+      </div>
     </div>` : '';
 
   placesEl.innerHTML = coordHtml + adminHtml;
@@ -575,7 +585,7 @@ function attachPlaceListeners() {
     el.addEventListener('mouseleave', () => {
       if (firstNamed && el !== firstNamed) showBoundary(firstNamed.dataset.id);
     });
-    el.addEventListener('click', () => goPlace(el.dataset.id, el.dataset.name));
+    el.addEventListener('click', () => goPlace(el.dataset.id, el.dataset.name, el.querySelector('.audio-only-cb')?.checked));
   });
 
   placesEl.querySelectorAll('.map-place-coord').forEach(el => {
@@ -595,7 +605,7 @@ function attachPlaceListeners() {
     el.addEventListener('click', () => goCoords(
       parseFloat(el.dataset.lat), parseFloat(el.dataset.lng),
       el.dataset.name, el.dataset.cc,
-      document.getElementById('coordAudioOnly')?.checked
+      el.querySelector('.audio-only-cb')?.checked
     ));
   });
 }
