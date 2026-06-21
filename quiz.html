@@ -32,6 +32,7 @@ const COORD_LAT  = params.get('lat')  ? parseFloat(params.get('lat'))  : null;
 const COORD_LNG  = params.get('lng')  ? parseFloat(params.get('lng'))  : null;
 const COORD_CC   = params.get('country_code') || null;
 const COORD_MODE = !PLACE_ID && COORD_LAT !== null && COORD_LNG !== null;
+const AUDIO_ONLY  = params.get('mode') === 'audio';
 
 const BBOX_SW_LAT = params.get('swlat') ? parseFloat(params.get('swlat')) : null;
 const BBOX_NE_LAT = params.get('nelat') ? parseFloat(params.get('nelat')) : null;
@@ -448,6 +449,7 @@ async function boot() {
     coordLat:       BBOX_MODE ? (BBOX_SW_LAT + BBOX_NE_LAT) / 2 : (COORD_MODE ? COORD_LAT : null),
     coordLng:       BBOX_MODE ? (BBOX_SW_LNG + BBOX_NE_LNG) / 2 : (COORD_MODE ? COORD_LNG : null),
     coordCC:        (COORD_MODE || BBOX_MODE) ? COORD_CC : null,
+    audioOnly:      AUDIO_ONLY,
   });
 
   // ── BBox mode (Nominatim bounding box passed directly) ───────────────────
@@ -459,7 +461,7 @@ async function boot() {
 
     if (COUNTRY_CODE) {
       try {
-        const cnr = await fetch(`place-names/${COUNTRY_CODE}.json`);
+        const cnr = await fetch(`place-names/${COUNTRY_CODE}.json?_=${Date.now()}`);
         if (cnr.ok) { placeNames = await cnr.json(); }
       } catch {}
     }
@@ -494,7 +496,7 @@ async function boot() {
 
     if (COUNTRY_CODE) {
       try {
-        const cnr = await fetch(`place-names/${COUNTRY_CODE}.json`);
+        const cnr = await fetch(`place-names/${COUNTRY_CODE}.json?_=${Date.now()}`);
         if (cnr.ok) { placeNames = await cnr.json(); }
       } catch {}
     }
@@ -547,7 +549,7 @@ async function boot() {
 
   // ── Normal place_id mode ──────────────────────────────────────────────────
   try {
-    const pnr = await fetch(`place-names/${PLACE_ID}.json`);
+    const pnr = await fetch(`place-names/${PLACE_ID}.json?_=${Date.now()}`);
     if (pnr.ok) { placeNames = await pnr.json(); }
   } catch {}
   CFG.indigenousField = 'indigenousName';
@@ -564,7 +566,7 @@ async function boot() {
 
   if (!placeNames && COUNTRY_CODE) {
     try {
-      const cnr = await fetch(`place-names/${COUNTRY_CODE}.json`);
+      const cnr = await fetch(`place-names/${COUNTRY_CODE}.json?_=${Date.now()}`);
       if (cnr.ok) { placeNames = await cnr.json(); }
     } catch {}
   }

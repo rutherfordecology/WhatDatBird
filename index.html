@@ -80,6 +80,7 @@
   .card-share svg { display: block; width: 18px; height: 18px; }
   .share-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a5940; color: #fff; padding: 10px 20px; border-radius: 10px; font-size: 0.85rem; font-weight: 700; pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 9999; }
   .card-count { font-size: 0.72rem; font-weight: 700; color: #2a7a58; }
+  .card-audio-tag { font-size: 0.7rem; font-weight: 800; color: #8a1f1f; }
   .tag { font-size: 0.6rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 20px; }
   .tag-preset { background: #e8f4ef; color: #1a5940; border: 1.5px solid #6dba9a; }
   .tag-dynamic { background: #e8f0f7; color: #2c5f8a; border: 1.5px solid #7aaed4; }
@@ -116,6 +117,9 @@
   .map-place-name { font-size:0.9rem; font-weight:700; color:#1c1b18; }
   .map-place-type { font-size:0.72rem; color:#9b9890; margin-top:1px; }
   .map-place-go { font-size:0.75rem; font-weight:800; color:#2a7a58; white-space:nowrap; }
+  .map-place-actions { display:flex; flex-direction:column; align-items:flex-end; gap:5px; }
+  .map-audio-toggle { display:flex; align-items:center; gap:5px; font-size:0.72rem; color:#5a584f; white-space:nowrap; cursor:pointer; }
+  .map-audio-toggle input { cursor:pointer; }
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -270,7 +274,9 @@ async function loadLibrary() {
     addQuizMarkers(quizzes);
 
     function cardHtml(q) {
+      const isAudio = /mode=audio/.test(q.url);
       const count = q.species ? `<span class="card-count">${q.species} species</span>` : '';
+      const audioTag = isAudio ? `<span class="card-audio-tag">&#128266; Audio</span>` : '';
       const imgId = `card-img-${q.place_id || q.url.replace(/\W/g,'')}`;
       const shareIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`;
       const absUrl = q.url.startsWith('http') ? q.url : `https://rutherfordecology.github.io/WhatDatBird/${q.url}`;
@@ -286,7 +292,7 @@ async function loadLibrary() {
         <div class="card-body">
           <div class="card-name">${q.name.replace('WhatDatBird? - ','')}</div>
           <div class="card-sub">${q.description}</div>
-          <div class="card-meta">${count}</div>
+          <div class="card-meta">${count}${audioTag}</div>
           <button class="card-share" onclick="shareQuiz(event,'${absUrl.replace(/'/g,"\\'")}','${safeName}');" title="Share this quiz">${shareIcon}</button>
           ${adminBtns}
         </div>
@@ -424,13 +430,16 @@ async function adminDelete(url) {
   } catch(e) { alert(`Error: ${e.message}`); }
 }
 
-function goPlace(id, name) {
-  window.location.href = `quiz.html?place_id=${id}&place_name=${encodeURIComponent(name)}`;
+function goPlace(id, name, audioOnly) {
+  let url = `quiz.html?place_id=${id}&place_name=${encodeURIComponent(name)}`;
+  if (audioOnly) url += `&mode=audio`;
+  window.location.href = url;
 }
-function goCoords(lat, lng, name, countryCode) {
+function goCoords(lat, lng, name, countryCode, audioOnly) {
   const label = prompt('What do you want to call this quiz?', name) ?? name;
   let url = `quiz.html?lat=${lat.toFixed(5)}&lng=${lng.toFixed(5)}&place_name=${encodeURIComponent(label.trim() || name)}`;
   if (countryCode) url += `&country_code=${countryCode}`;
+  if (audioOnly) url += `&mode=audio`;
   window.location.href = url;
 }
 
@@ -447,12 +456,27 @@ const TYPE_LABEL = {
 };
 
 // Initialise the combined map immediately on page load
-pickMap = L.map('mainMap').setView([20, 0], 2);
+// Centred further east (Pacific-ish) with extra lng buffer past +/-180 so places near the
+// dateline (NZ, Pacific islands) aren't pinned against a hard edge with no breathing room.
+pickMap = L.map('mainMap', {
+  minZoom: 2,
+  maxBounds: [[-90, -270], [90, 270]],
+  maxBoundsViscosity: 1.0
+}).setView([10, 140], 2);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  maxZoom: 18
+  maxZoom: 18,
+  noWrap: false
 }).addTo(pickMap);
 pickMap.on('click', onMapClick);
+
+const audioMarkerIcon = L.divIcon({
+  className: 'audio-marker-icon',
+  html: `<svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg"><path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z" fill="#8a1f1f" stroke="#5c1212" stroke-width="1"/><circle cx="12.5" cy="12.5" r="5.5" fill="#fff"/></svg>`,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+});
 
 async function addQuizMarkers(quizzes) {
   const coordPromises = quizzes.map(q => resolveQuizCoords(q).then(c => ({ q, c })));
@@ -460,7 +484,8 @@ async function addQuizMarkers(quizzes) {
     const { q, c } = await p;
     if (!c) continue;
     const label = q.description || q.name.replace('WhatDatBird? - ', '');
-    L.marker([c.lat, c.lng])
+    const isAudio = /mode=audio/.test(q.url);
+    L.marker([c.lat, c.lng], isAudio ? { icon: audioMarkerIcon } : {})
       .addTo(pickMap)
       .bindPopup(`<div style="font-family:system-ui,-apple-system,sans-serif;text-align:center;min-width:130px"><strong style="color:#1a5940;display:block;margin-bottom:6px">${label}</strong><a href="${q.url}" style="color:#1a5940;font-weight:800;text-decoration:none">Play this quiz &#8594;</a></div>`);
   }
@@ -556,10 +581,12 @@ async function fetchBoundary(id) {
   } catch { return null; }
 }
 
+let _boundaryReqId = 0;
 async function showBoundary(id) {
+  const reqId = ++_boundaryReqId;
   clearBoundary();
   const geo = await fetchBoundary(id);
-  if (!geo || !pickMap) return;
+  if (!geo || !pickMap || reqId !== _boundaryReqId) return; // a newer hover superseded this one
   boundaryLayer = L.geoJSON(geo, {
     style: { color: '#1a5940', weight: 2.5, fillColor: '#2a7a58', fillOpacity: 0.15 }
   }).addTo(pickMap);
@@ -576,7 +603,12 @@ function renderPlaceList(places, coordOption) {
         <div class="map-place-name">${p.display_name}</div>
         <div class="map-place-type">${TYPE_LABEL[p.place_type] || 'Place'}</div>
       </div>
-      <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
+      <div class="map-place-actions">
+        <label class="map-audio-toggle" onclick="event.stopPropagation()">
+          <input type="checkbox" class="audio-only-cb">&#128266; Audio only
+        </label>
+        <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
+      </div>
     </div>`).join('');
 
   const coordHtml = coordOption ? `
@@ -585,7 +617,12 @@ function renderPlaceList(places, coordOption) {
         <div class="map-place-name">&#x1F4CD; ${coordOption.display_name}</div>
         <div class="map-place-type" id="coordSubtitle">Starting ~100m · expands until 25+ species found</div>
       </div>
-      <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
+      <div class="map-place-actions">
+        <label class="map-audio-toggle" onclick="event.stopPropagation()">
+          <input type="checkbox" class="audio-only-cb">&#128266; Audio only
+        </label>
+        <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
+      </div>
     </div>` : '';
 
   placesEl.innerHTML = coordHtml + adminHtml;
@@ -603,7 +640,7 @@ function attachPlaceListeners() {
     el.addEventListener('mouseleave', () => {
       if (firstNamed && el !== firstNamed) showBoundary(firstNamed.dataset.id);
     });
-    el.addEventListener('click', () => goPlace(el.dataset.id, el.dataset.name));
+    el.addEventListener('click', () => goPlace(el.dataset.id, el.dataset.name, el.querySelector('.audio-only-cb')?.checked));
   });
 
   placesEl.querySelectorAll('.map-place-coord').forEach(el => {
@@ -622,7 +659,8 @@ function attachPlaceListeners() {
     });
     el.addEventListener('click', () => goCoords(
       parseFloat(el.dataset.lat), parseFloat(el.dataset.lng),
-      el.dataset.name, el.dataset.cc
+      el.dataset.name, el.dataset.cc,
+      el.querySelector('.audio-only-cb')?.checked
     ));
   });
 }

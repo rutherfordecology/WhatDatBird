@@ -366,21 +366,183 @@ function randomXenoRec(latin, currentFile) {
   return pick[Math.floor(Math.random() * pick.length)];
 }
 
+// ── Client-side spectrogram (audio-only mode) ──────────────────────────────
+// xeno-canto's spectrogram image host sits behind an anti-bot JS challenge that
+// can't be solved from a server-side fetch or an <img> request, so we render our
+// own from the audio file itself (which has no such protection).
+const spectroCache = {}; // file URL → dataURL string | 'pending' | 'error'
+
+function hannWindow(n) {
+  const w = new Float32Array(n);
+  for (let i = 0; i < n; i++) w[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (n - 1)));
+  return w;
+}
+
+// In-place iterative radix-2 Cooley-Tukey FFT; real/imag length must be a power of 2.
+function fft(real, imag) {
+  const n = real.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) {
+      [real[i], real[j]] = [real[j], real[i]];
+      [imag[i], imag[j]] = [imag[j], imag[i]];
+    }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = -2 * Math.PI / len;
+    const wr = Math.cos(ang), wi = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let curWr = 1, curWi = 0;
+      for (let j = 0; j < len / 2; j++) {
+        const ur = real[i + j], ui = imag[i + j];
+        const vr = real[i + j + len / 2] * curWr - imag[i + j + len / 2] * curWi;
+        const vi = real[i + j + len / 2] * curWi + imag[i + j + len / 2] * curWr;
+        real[i + j] = ur + vr; imag[i + j] = ui + vi;
+        real[i + j + len / 2] = ur - vr; imag[i + j + len / 2] = ui - vi;
+        const nWr = curWr * wr - curWi * wi;
+        const nWi = curWr * wi + curWi * wr;
+        curWr = nWr; curWi = nWi;
+      }
+    }
+  }
+}
+
+const audioDurationCache = {}; // file URL → duration in seconds (decoded, unlike <audio>.duration which can stay NaN for streamed files)
+
+// Single shared fetch per file, used by both the spectrogram (FFT decode) and playback
+// (blob URL) — without this, a slow connection (4G) ends up downloading the same recording
+// twice concurrently: once via fetch() here and again via the <audio> element's own request.
+const audioResourcePromises = {}; // file URL → Promise<{blobUrl, arrayBuffer} | null>
+function loadAudioResource(fileUrl) {
+  if (audioResourcePromises[fileUrl]) return audioResourcePromises[fileUrl];
+  audioResourcePromises[fileUrl] = (async () => {
+    try {
+      const resp = await fetch(fileUrl);
+      const arrayBuffer = await resp.arrayBuffer();
+      const blobUrl = URL.createObjectURL(new Blob([arrayBuffer], { type: resp.headers.get('Content-Type') || 'audio/mpeg' }));
+      return { blobUrl, arrayBuffer };
+    } catch (e) {
+      return null;
+    }
+  })();
+  return audioResourcePromises[fileUrl];
+}
+
+async function generateSpectrogram(fileUrl) {
+  try {
+    const res = await loadAudioResource(fileUrl);
+    if (!res) return null;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioCtx();
+    // decodeAudioData detaches the buffer it's given, so hand it a copy — the original
+    // bytes are still needed intact for the <audio> element's blob URL.
+    const audioBuffer = await audioCtx.decodeAudioData(res.arrayBuffer.slice(0));
+    const channelData = audioBuffer.getChannelData(0);
+    audioDurationCache[fileUrl] = audioBuffer.duration;
+    audioCtx.close();
+
+    const FFT_SIZE = 1024, HOP = 512, numBins = FFT_SIZE / 2;
+    const numFrames = Math.max(1, Math.floor((channelData.length - FFT_SIZE) / HOP) + 1);
+    const win = hannWindow(FFT_SIZE);
+    const frameMags = new Array(numFrames);
+    let maxMag = 0;
+
+    for (let f = 0; f < numFrames; f++) {
+      const start = f * HOP;
+      const real = new Float32Array(FFT_SIZE), imag = new Float32Array(FFT_SIZE);
+      for (let i = 0; i < FFT_SIZE; i++) real[i] = (channelData[start + i] || 0) * win[i];
+      fft(real, imag);
+      const mags = new Float32Array(numBins);
+      for (let i = 0; i < numBins; i++) mags[i] = Math.hypot(real[i], imag[i]);
+      frameMags[f] = mags;
+    }
+
+    // Only render up to ~10kHz — bird calls rarely exceed it, and cropping here (rather than
+    // just zeroing the rest) avoids a wasted black band and lets contrast scale to what's visible
+    const maxBin = Math.min(numBins, Math.ceil(10000 / (audioBuffer.sampleRate / FFT_SIZE)));
+    for (let f = 0; f < numFrames; f++) {
+      for (let bin = 0; bin < maxBin; bin++) if (frameMags[f][bin] > maxMag) maxMag = frameMags[f][bin];
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = numFrames;
+    canvas.height = maxBin;
+    const ctx2d = canvas.getContext('2d');
+    const imgData = ctx2d.createImageData(numFrames, maxBin);
+    const logMax = Math.log1p(maxMag) || 1;
+
+    for (let f = 0; f < numFrames; f++) {
+      const mags = frameMags[f];
+      for (let bin = 0; bin < maxBin; bin++) {
+        const v = Math.log1p(mags[bin]) / logMax;
+        const y = maxBin - 1 - bin;
+        const idx = (y * numFrames + f) * 4;
+        imgData.data[idx]     = Math.min(255, v * 120);
+        imgData.data[idx + 1] = Math.min(255, v * 255);
+        imgData.data[idx + 2] = Math.min(255, v * 160);
+        imgData.data[idx + 3] = 255;
+      }
+    }
+    ctx2d.putImageData(imgData, 0, 0);
+    return canvas.toDataURL('image/png');
+  } catch (e) {
+    console.warn('Spectrogram generation failed:', e.message);
+    return null;
+  }
+}
+
+function ensureSpectrogram(fileUrl, forBird) {
+  if (!fileUrl || spectroCache[fileUrl] !== undefined) return;
+  spectroCache[fileUrl] = 'pending';
+  generateSpectrogram(fileUrl).then(dataUrl => {
+    spectroCache[fileUrl] = dataUrl || 'error';
+    if (state.current === forBird) render();
+  });
+}
+
+const SPECTRO_PX_PER_SEC = 140;
 let currentAudio = null;
+let _playheadRAF = null;
+let _currentPlaybackFile = null;
+function cancelPlayheadLoop() {
+  if (_playheadRAF) { cancelAnimationFrame(_playheadRAF); _playheadRAF = null; }
+}
+function startPlayheadLoop() {
+  cancelPlayheadLoop();
+  const tick = () => {
+    const el = document.getElementById('spectroImg');
+    if (el && currentAudio) {
+      el.style.transform = `translateX(${-currentAudio.currentTime * SPECTRO_PX_PER_SEC}px)`;
+    }
+    if (currentAudio && !currentAudio.paused) _playheadRAF = requestAnimationFrame(tick);
+  };
+  _playheadRAF = requestAnimationFrame(tick);
+}
 function stopAudio() {
+  cancelPlayheadLoop();
   if (currentAudio) { currentAudio.pause(); currentAudio.onended=null; currentAudio=null; }
 }
 function playRecording(rec) {
   stopAudio();
-  currentAudio = new Audio(rec.file);
-  currentAudio.onended = () => setState({audioPlaying:false, audioRec:null});
-  currentAudio.play().catch(() => setState({audioPlaying:false, audioRec:null}));
-  setState({audioPlaying:true, audioLoading:false, audioRec:rec});
+  _currentPlaybackFile = rec.file;
+  setState({audioPlaying:false, audioLoading:true, audioRec:rec});
+  loadAudioResource(rec.file).then(res => {
+    if (_currentPlaybackFile !== rec.file) return; // superseded by a newer play/next/advance
+    currentAudio = new Audio(res?.blobUrl || rec.file); // fall back to the direct URL if the fetch failed
+    currentAudio.onended = () => { cancelPlayheadLoop(); setState({audioPlaying:false}); };
+    currentAudio.play().then(startPlayheadLoop).catch(() => setState({audioPlaying:false}));
+    setState({audioPlaying:true, audioLoading:false});
+  });
 }
 function toggleAudio() {
   const bird = state.current;
   if (!bird) return;
-  if (state.audioPlaying) { stopAudio(); setState({audioPlaying:false, audioRec:null}); return; }
+  // Keep audioRec on stop so the displayed spectrogram and a later restart both refer to
+  // the same recording — previously this cleared audioRec, and restarting picked a random
+  // recording while the spectrogram still showed whichever one rendered first.
+  if (state.audioPlaying) { stopAudio(); setState({audioPlaying:false}); return; }
   const latin = bird.latin || bird.name;
   const cached = xenoCantoCache[latin];
   if (cached === undefined) {
@@ -392,7 +554,8 @@ function toggleAudio() {
     });
     return;
   }
-  if (cached) playRecording(randomXenoRec(latin, null));
+  const rec = state.audioRec || cached?.[0];
+  if (rec) playRecording(rec);
 }
 function nextAudio() {
   const bird = state.current;
@@ -810,16 +973,42 @@ function renderQuiz(app) {
     return `<div class="${h===true?'dot correct':h===false?'dot wrong':'dot'}">${h===true?'&#11088;':h===false?'&#10005;':''}</div>`;
   }).join('');
 
-  let imgContent;
-  if(state.imgLoading) imgContent=`<div class="img-placeholder"><div class="icon">&#128247;</div><span>Loading...</span></div>`;
-  else if(state.imgUrl) imgContent=`<img src="${state.imgUrl}" alt="mystery bird" onerror="imgFailed()" onload="adjustImgPosition(this)"/>`;
-  else imgContent=`<div class="img-placeholder"><div class="icon">&#128247;</div><span>No photo available</span></div>`;
+  let imgContent, carousel = '';
+  if (CFG.audioOnly) {
+    const audioLatin = bird.latin || bird.name;
+    const pool = xenoCantoCache[audioLatin];
+    const hasMultiple = (pool?.length || 0) > 1;
+    if (state.audioLoading) {
+      imgContent = `<div class="img-placeholder"><div class="icon">&#128266;</div><span>Loading call...</span></div>`;
+    } else {
+      const displayRec = state.audioRec || pool?.[0];
+      if (displayRec?.file) ensureSpectrogram(displayRec.file, bird);
+      const spectroState = displayRec?.file ? spectroCache[displayRec.file] : undefined;
+      const dur = displayRec?.file ? audioDurationCache[displayRec.file] : null;
+      // The image scrolls under a fixed center line, rather than sliding a line across a
+      // static image — width is duration*SPECTRO_PX_PER_SEC so elapsed time maps to pixels.
+      const imgWidthPx = dur ? Math.max(1, dur * SPECTRO_PX_PER_SEC) : null;
+      const sonoImg = (spectroState && spectroState !== 'pending' && spectroState !== 'error' && imgWidthPx)
+        ? `<div class="spectro-wrap"><img id="spectroImg" src="${spectroState}" alt="spectrogram" class="spectro-img" style="width:${imgWidthPx}px"/></div>
+           <div class="spectro-playhead"></div>` : '';
+      imgContent = `
+        ${sonoImg}
+        <button class="audio-box-btn${state.audioPlaying?' playing':''}" onclick="toggleAudio()" aria-label="${state.audioPlaying?'Stop call':'Play call'}">
+          ${state.audioPlaying?'&#9208;&#65039;':'&#128266;'}
+        </button>
+        ${hasMultiple?'<button class="carousel-btn carousel-next" onclick="nextAudio()" title="Different recording">&#8635;</button>':''}`;
+    }
+  } else {
+    if(state.imgLoading) imgContent=`<div class="img-placeholder"><div class="icon">&#128247;</div><span>Loading...</span></div>`;
+    else if(state.imgUrl) imgContent=`<img src="${state.imgUrl}" alt="mystery bird" onerror="imgFailed()" onload="adjustImgPosition(this)"/>`;
+    else imgContent=`<div class="img-placeholder"><div class="icon">&#128247;</div><span>No photo available</span></div>`;
 
-  const multi = state.photoUrls.length>1 && !state.imgLoading;
-  const carousel = multi ? `
-    <button class="carousel-btn carousel-prev" onclick="prevPhoto()">&#8249;</button>
-    <button class="carousel-btn carousel-next" onclick="nextPhoto()">&#8250;</button>
-    <div class="carousel-dots">${state.photoUrls.map((_,i)=>`<div class="carousel-dot ${i===state.photoIdx?'active':''}" onclick="goPhoto(${i})"></div>`).join('')}</div>` : '';
+    const multi = state.photoUrls.length>1 && !state.imgLoading;
+    carousel = multi ? `
+      <button class="carousel-btn carousel-prev" onclick="prevPhoto()">&#8249;</button>
+      <button class="carousel-btn carousel-next" onclick="nextPhoto()">&#8250;</button>
+      <div class="carousel-dots">${state.photoUrls.map((_,i)=>`<div class="carousel-dot ${i===state.photoIdx?'active':''}" onclick="goPhoto(${i})"></div>`).join('')}</div>` : '';
+  }
 
   let overlay='';
   if(state.selected) {
@@ -880,10 +1069,12 @@ function renderQuiz(app) {
   const audioLatin = bird.latin || bird.name;
   const audioRecAvailable = audioLatin ? xenoCantoCache[audioLatin] : null;
   if (audioRecAvailable) {
-    const icon = state.audioPlaying ? '&#9208;&#65039;' : '&#128266;';
-    const hasMultiple = xenoCantoCache[audioLatin]?.length > 1;
-    const nextBtn = hasMultiple ? `<button class="audio-btn" onclick="nextAudio()" title="Different recording" aria-label="Next recording" style="margin-left:4px;font-size:0.75rem;">&#8635;</button>` : '';
-    audioBtnHtml = `<button class="audio-btn${state.audioPlaying?' playing':''}" onclick="toggleAudio()" title="${state.audioPlaying?'Stop call':'Play call'}" aria-label="Play bird call">${icon}</button>${nextBtn}`;
+    if (!CFG.audioOnly) {
+      const icon = state.audioPlaying ? '&#9208;&#65039;' : '&#128266;';
+      const hasMultiple = xenoCantoCache[audioLatin]?.length > 1;
+      const nextBtn = hasMultiple ? `<button class="audio-btn" onclick="nextAudio()" title="Different recording" aria-label="Next recording" style="margin-left:4px;font-size:0.75rem;">&#8635;</button>` : '';
+      audioBtnHtml = `<button class="audio-btn${state.audioPlaying?' playing':''}" onclick="toggleAudio()" title="${state.audioPlaying?'Stop call':'Play call'}" aria-label="Play bird call">${icon}</button>${nextBtn}`;
+    }
     const displayRec = state.audioRec || audioRecAvailable[0];
     audioCreditHtml = `<p class="audio-credit">&#127925; Recording by <a href="${displayRec.url}" target="_blank">${displayRec.recordist}</a> via <a href="https://xeno-canto.org" target="_blank">xeno-canto.org</a></p>`;
   }
@@ -900,8 +1091,8 @@ function renderQuiz(app) {
         <div class="streak-dots">${dots}</div>
         <span class="streak-label">&#128293; ${state.streak}/${STREAK_TARGET}</span>
       </div>
-      <div class="img-box" id="imgBox" ontouchstart="_swipeX=event.touches[0].clientX" ontouchend="if(Math.abs(event.changedTouches[0].clientX-_swipeX)>40){event.changedTouches[0].clientX<_swipeX?nextPhoto():prevPhoto()}">${imgContent}${overlay}${carousel}</div>
-      <p class="question-text">&#128269; Which bird is this?${audioBtnHtml}</p>
+      <div class="img-box${CFG.audioOnly?' img-box-audio':''}" id="imgBox" ontouchstart="_swipeX=event.touches[0].clientX" ontouchend="if(Math.abs(event.changedTouches[0].clientX-_swipeX)>40){event.changedTouches[0].clientX<_swipeX?nextPhoto():prevPhoto()}">${imgContent}${overlay}${carousel}</div>
+      <p class="question-text">${CFG.audioOnly ? '&#128266; Which bird is calling?' : '&#128269; Which bird is this?'}${audioBtnHtml}</p>
       ${audioCreditHtml}
       <div class="options">${optionsHtml}</div>
       ${fieldNote}
@@ -1123,14 +1314,13 @@ function renderAbout(app, header) {
 
 // ── Actions ───────────────────────────────────────────────────────────────
 function adjustImgPosition(img) {
-  // On narrow phones the CSS fixes the box height, so skip inline height overrides
-  if (window.innerWidth <= 500) return;
   const isPortrait = img.naturalWidth < img.naturalHeight;
   if(isPortrait) {
-    const fullH = img.offsetWidth/(img.naturalWidth/img.naturalHeight);
-    img.style.height=(fullH*0.7)+'px'; img.style.objectPosition='center 15%';
+    img.style.height='100%'; img.style.maxHeight=''; img.style.objectFit='contain'; img.style.objectPosition='center center'; img.style.transform='scale(1.1)';
+  } else if (window.innerWidth <= 500) {
+    img.style.height='100%'; img.style.maxHeight=''; img.style.objectFit='cover'; img.style.objectPosition='center center'; img.style.transform='';
   } else {
-    img.style.height='auto'; img.style.maxHeight='65vw'; img.style.objectPosition='center center';
+    img.style.height='auto'; img.style.maxHeight='65vw'; img.style.objectFit='cover'; img.style.objectPosition='center center'; img.style.transform='';
   }
 }
 function imgFailed() {
@@ -1166,6 +1356,8 @@ function slidePhoto(newIdx, dir) {
     newImg.style.cssText = '';
     newImg.className = '';
     box.style.height = '';
+    if (newImg.complete) adjustImgPosition(newImg);
+    else newImg.onload = () => adjustImgPosition(newImg);
     state.photoIdx = newIdx;
     state.imgUrl = state.photoUrls[newIdx];
     box.querySelectorAll('.carousel-dot').forEach((d,i) => d.classList.toggle('active', i===newIdx));
@@ -1216,12 +1408,33 @@ function startQuiz() {
   const pool=getPool();
   const queue=buildQueue(pool);
   const first=queue.shift();
-  setState({phase:'quiz',queue,wrongBin:[],current:first,streak:0,streakHistory:[],totalSeen:0,totalCorrect:0,roundsCompleted:0,selected:null,imgUrl:null,imgLoading:true,photoUrls:[],photoIdx:0,options:getOptions(first,pool)});
+  setState({phase:'quiz',queue,wrongBin:[],current:first,streak:0,streakHistory:[],totalSeen:0,totalCorrect:0,roundsCompleted:0,selected:null,imgUrl:null,imgLoading:!CFG.audioOnly,photoUrls:[],photoIdx:0,options:getOptions(first,pool),audioPlaying:false,audioLoading:!!CFG.audioOnly,audioRec:null});
+  if (CFG.audioOnly) {
+    loadAudioQuestion(first);
+    if (queue[0]) {
+      fetchXenoCanto(queue[0].latin || queue[0].name).then(rec => {
+        if (!rec) return;
+        loadAudioResource(rec.file).catch(() => {});
+        ensureSpectrogram(rec.file, queue[0]);
+      }).catch(() => {});
+    }
+    return;
+  }
   fetchImage(first, state.mode).then(url => {
     const all=(inatPhotoCache[first.latin||first.name]||[]).slice(0,5);
     const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;
     if (!url && !photoUrls.length) { logNoPhoto(first); _advance(); return; }
     setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});
+  });
+}
+
+// Audio-only mode: skip birds with no usable Xeno-canto recording, autoplay on load
+function loadAudioQuestion(bird) {
+  fetchXenoCanto(bird.latin || bird.name).then(rec => {
+    if (state.current !== bird) return;
+    if (!rec) { _advance(); return; }
+    setState({audioLoading:false});
+    playRecording(rec);
   });
 }
 
@@ -1258,7 +1471,9 @@ function _advance() {
   if(queue.length===0&&wrongBin.length===0){setState({phase:'result'});return;}
 
   const WRONG_GAP = 3;
-  const eligible = wrongBin.filter(w => state.totalSeen - w.wrongAt >= WRONG_GAP);
+  const eligible = queue.length === 0
+    ? wrongBin
+    : wrongBin.filter(w => state.totalSeen - w.wrongAt >= WRONG_GAP);
   const insertWrong = eligible.length > 0 && (queue.length === 0 || state.totalSeen % 3 === 0);
 
   stopAudio();
@@ -1275,25 +1490,39 @@ function _advance() {
       queue.splice(Math.min(Math.floor(Math.random()*4)+1,queue.length),0,pick.bird);
     }
   }
-  setState({current:next,queue,wrongBin,selected:null,imgUrl:null,imgLoading:true,photoUrls:[],photoIdx:0,options:getOptions(next,pool),audioPlaying:false,audioLoading:false,audioRec:null});
-  fetchImage(next, state.mode).then(url => {
-    const all=(inatPhotoCache[next.latin||next.name]||[]).slice(0,5);
-    const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;
-    if (!url && !photoUrls.length) {
-      logNoPhoto(next);
-      _advance();
-      return;
-    }
-    setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});
-  });
-  // Prefetch current bird's field note + call audio, and next bird's photos + note + audio
+  setState({current:next,queue,wrongBin,selected:null,imgUrl:null,imgLoading:!CFG.audioOnly,photoUrls:[],photoIdx:0,options:getOptions(next,pool),audioPlaying:false,audioLoading:!!CFG.audioOnly,audioRec:null});
   if (next.wikiUrl && !next.note) fetchIDNote(next.wikiUrl).catch(() => {});
-  fetchXenoCanto(next.latin || next.name).then(rec => { if (rec && state.current === next) render(); }).catch(() => {});
+  if (CFG.audioOnly) {
+    loadAudioQuestion(next);
+  } else {
+    fetchImage(next, state.mode).then(url => {
+      const all=(inatPhotoCache[next.latin||next.name]||[]).slice(0,5);
+      const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;
+      if (!url && !photoUrls.length) {
+        logNoPhoto(next);
+        _advance();
+        return;
+      }
+      setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});
+    });
+    // Prefetch current bird's call audio (supplemental, not required)
+    fetchXenoCanto(next.latin || next.name).then(rec => { if (rec && state.current === next) render(); }).catch(() => {});
+  }
   const prefetchBird = queue[0] || wrongBin[0]?.bird;
   if (prefetchBird) {
-    fetchInatImage(prefetchBird).catch(() => {});
     if (prefetchBird.wikiUrl && !prefetchBird.note) fetchIDNote(prefetchBird.wikiUrl).catch(() => {});
-    fetchXenoCanto(prefetchBird.latin || prefetchBird.name).catch(() => {});
+    if (CFG.audioOnly) {
+      // Download the next bird's audio (and build its spectrogram) while the current one
+      // is still playing, so there's no fetch-and-wait delay when the user advances.
+      fetchXenoCanto(prefetchBird.latin || prefetchBird.name).then(rec => {
+        if (!rec) return;
+        loadAudioResource(rec.file).catch(() => {});
+        ensureSpectrogram(rec.file, prefetchBird);
+      }).catch(() => {});
+    } else {
+      fetchInatImage(prefetchBird).catch(() => {});
+      fetchXenoCanto(prefetchBird.latin || prefetchBird.name).catch(() => {});
+    }
   }
 }
 
@@ -1483,7 +1712,7 @@ async function saveToLibrary() {
     description: quizLabel,
     species:     null,
     type:        'dynamic',
-    url:         `quiz.html?place_id=${CFG.placeId}&place_name=${encodeURIComponent(quizLabel)}`,
+    url:         `quiz.html?place_id=${CFG.placeId}&place_name=${encodeURIComponent(quizLabel)}${CFG.audioOnly ? '&mode=audio' : ''}`,
     place_id:    Number(CFG.placeId),
     photo_taxon: photoTaxon,
     lat,
@@ -1496,7 +1725,7 @@ async function saveToLibrary() {
     description: quizLabel,
     species:     null,
     type:        'dynamic',
-    url:         `quiz.html?lat=${CFG.coordLat}&lng=${CFG.coordLng}&place_name=${encodeURIComponent(quizLabel)}${CFG.coordCC ? '&country_code='+CFG.coordCC : ''}`,
+    url:         `quiz.html?lat=${CFG.coordLat}&lng=${CFG.coordLng}&place_name=${encodeURIComponent(quizLabel)}${CFG.coordCC ? '&country_code='+CFG.coordCC : ''}${CFG.audioOnly ? '&mode=audio' : ''}`,
     coord_lat:   CFG.coordLat,
     coord_lng:   CFG.coordLng,
     photo_taxon: photoTaxon,
