@@ -411,12 +411,34 @@ function fft(real, imag) {
 
 const audioDurationCache = {}; // file URL → duration in seconds (decoded, unlike <audio>.duration which can stay NaN for streamed files)
 
+// Single shared fetch per file, used by both the spectrogram (FFT decode) and playback
+// (blob URL) — without this, a slow connection (4G) ends up downloading the same recording
+// twice concurrently: once via fetch() here and again via the <audio> element's own request.
+const audioResourcePromises = {}; // file URL → Promise<{blobUrl, arrayBuffer} | null>
+function loadAudioResource(fileUrl) {
+  if (audioResourcePromises[fileUrl]) return audioResourcePromises[fileUrl];
+  audioResourcePromises[fileUrl] = (async () => {
+    try {
+      const resp = await fetch(fileUrl);
+      const arrayBuffer = await resp.arrayBuffer();
+      const blobUrl = URL.createObjectURL(new Blob([arrayBuffer], { type: resp.headers.get('Content-Type') || 'audio/mpeg' }));
+      return { blobUrl, arrayBuffer };
+    } catch (e) {
+      return null;
+    }
+  })();
+  return audioResourcePromises[fileUrl];
+}
+
 async function generateSpectrogram(fileUrl) {
   try {
+    const res = await loadAudioResource(fileUrl);
+    if (!res) return null;
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     const audioCtx = new AudioCtx();
-    const arrayBuffer = await fetch(fileUrl).then(r => r.arrayBuffer());
-    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    // decodeAudioData detaches the buffer it's given, so hand it a copy — the original
+    // bytes are still needed intact for the <audio> element's blob URL.
+    const audioBuffer = await audioCtx.decodeAudioData(res.arrayBuffer.slice(0));
     const channelData = audioBuffer.getChannelData(0);
     audioDurationCache[fileUrl] = audioBuffer.duration;
     audioCtx.close();
@@ -505,10 +527,14 @@ function stopAudio() {
 function playRecording(rec) {
   stopAudio();
   _currentPlaybackFile = rec.file;
-  currentAudio = new Audio(rec.file);
-  currentAudio.onended = () => { cancelPlayheadLoop(); setState({audioPlaying:false}); };
-  currentAudio.play().then(startPlayheadLoop).catch(() => setState({audioPlaying:false}));
-  setState({audioPlaying:true, audioLoading:false, audioRec:rec});
+  setState({audioPlaying:false, audioLoading:true, audioRec:rec});
+  loadAudioResource(rec.file).then(res => {
+    if (_currentPlaybackFile !== rec.file) return; // superseded by a newer play/next/advance
+    currentAudio = new Audio(res?.blobUrl || rec.file); // fall back to the direct URL if the fetch failed
+    currentAudio.onended = () => { cancelPlayheadLoop(); setState({audioPlaying:false}); };
+    currentAudio.play().then(startPlayheadLoop).catch(() => setState({audioPlaying:false}));
+    setState({audioPlaying:true, audioLoading:false});
+  });
 }
 function toggleAudio() {
   const bird = state.current;
