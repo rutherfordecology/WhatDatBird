@@ -21,21 +21,6 @@ export default {
 
     try {
       const url = new URL(request.url);
-
-      // Spectrogram image proxy: xeno-canto's static image host 503s on browser-originated
-      // (hotlinked) requests, but allows plain server-side fetches — so fetch it here instead.
-      const sonoUrl = url.searchParams.get('sono');
-      if (sonoUrl) {
-        if (!sonoUrl.startsWith('https://xeno-canto.org/')) {
-          return new Response('Invalid sono URL', { status: 400, headers: corsHeaders });
-        }
-        const imgRes = await fetch(sonoUrl);
-        return new Response(imgRes.body, {
-          status: imgRes.status,
-          headers: { 'Content-Type': imgRes.headers.get('Content-Type') || 'image/png', 'Cache-Control': 'public, max-age=86400', ...corsHeaders },
-        });
-      }
-
       const gen = url.searchParams.get('gen');
       const sp  = url.searchParams.get('sp');
 

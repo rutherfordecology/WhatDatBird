@@ -353,14 +353,7 @@ async function fetchXenoCanto(latin) {
     const proto = u => u && (u.startsWith('//') ? 'https:'+u : u);
     const pool = (d.recordings||[])
       .filter(rec => rec.file)
-      .map(rec => {
-        const sonoUrl = proto(rec.sono?.med || rec.sono?.small || rec.sono?.large);
-        return {
-          file: proto(rec.file), recordist: rec.rec || 'Unknown', url: proto(rec.url) || 'https://xeno-canto.org',
-          // Routed through our Worker — xeno-canto's image host 503s on direct hotlinked requests
-          sono: sonoUrl ? `${XC_PROXY}/?sono=${encodeURIComponent(sonoUrl)}` : null,
-        };
-      });
+      .map(rec => ({ file: proto(rec.file), recordist: rec.rec || 'Unknown', url: proto(rec.url) || 'https://xeno-canto.org' }));
     xenoCantoCache[latin] = pool.length ? pool : null;
     return xenoCantoCache[latin]?.[0] || null;
   } catch { xenoCantoCache[latin]=null; return null; }
@@ -371,6 +364,117 @@ function randomXenoRec(latin, currentFile) {
   const others = pool.filter(r => r.file !== currentFile);
   const pick = others.length ? others : pool;
   return pick[Math.floor(Math.random() * pick.length)];
+}
+
+// ── Client-side spectrogram (audio-only mode) ──────────────────────────────
+// xeno-canto's spectrogram image host sits behind an anti-bot JS challenge that
+// can't be solved from a server-side fetch or an <img> request, so we render our
+// own from the audio file itself (which has no such protection).
+const spectroCache = {}; // file URL → dataURL string | 'pending' | 'error'
+
+function hannWindow(n) {
+  const w = new Float32Array(n);
+  for (let i = 0; i < n; i++) w[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (n - 1)));
+  return w;
+}
+
+// In-place iterative radix-2 Cooley-Tukey FFT; real/imag length must be a power of 2.
+function fft(real, imag) {
+  const n = real.length;
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) {
+      [real[i], real[j]] = [real[j], real[i]];
+      [imag[i], imag[j]] = [imag[j], imag[i]];
+    }
+  }
+  for (let len = 2; len <= n; len <<= 1) {
+    const ang = -2 * Math.PI / len;
+    const wr = Math.cos(ang), wi = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let curWr = 1, curWi = 0;
+      for (let j = 0; j < len / 2; j++) {
+        const ur = real[i + j], ui = imag[i + j];
+        const vr = real[i + j + len / 2] * curWr - imag[i + j + len / 2] * curWi;
+        const vi = real[i + j + len / 2] * curWi + imag[i + j + len / 2] * curWr;
+        real[i + j] = ur + vr; imag[i + j] = ui + vi;
+        real[i + j + len / 2] = ur - vr; imag[i + j + len / 2] = ui - vi;
+        const nWr = curWr * wr - curWi * wi;
+        const nWi = curWr * wi + curWi * wr;
+        curWr = nWr; curWi = nWi;
+      }
+    }
+  }
+}
+
+async function generateSpectrogram(fileUrl) {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioCtx();
+    const arrayBuffer = await fetch(fileUrl).then(r => r.arrayBuffer());
+    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+    const channelData = audioBuffer.getChannelData(0);
+    audioCtx.close();
+
+    const FFT_SIZE = 1024, HOP = 512, numBins = FFT_SIZE / 2;
+    const numFrames = Math.max(1, Math.floor((channelData.length - FFT_SIZE) / HOP) + 1);
+    const win = hannWindow(FFT_SIZE);
+    const frameMags = new Array(numFrames);
+    let maxMag = 0;
+
+    for (let f = 0; f < numFrames; f++) {
+      const start = f * HOP;
+      const real = new Float32Array(FFT_SIZE), imag = new Float32Array(FFT_SIZE);
+      for (let i = 0; i < FFT_SIZE; i++) real[i] = (channelData[start + i] || 0) * win[i];
+      fft(real, imag);
+      const mags = new Float32Array(numBins);
+      for (let i = 0; i < numBins; i++) mags[i] = Math.hypot(real[i], imag[i]);
+      frameMags[f] = mags;
+    }
+
+    // Only render up to ~10kHz — bird calls rarely exceed it, and cropping here (rather than
+    // just zeroing the rest) avoids a wasted black band and lets contrast scale to what's visible
+    const maxBin = Math.min(numBins, Math.ceil(10000 / (audioBuffer.sampleRate / FFT_SIZE)));
+    for (let f = 0; f < numFrames; f++) {
+      for (let bin = 0; bin < maxBin; bin++) if (frameMags[f][bin] > maxMag) maxMag = frameMags[f][bin];
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = numFrames;
+    canvas.height = maxBin;
+    const ctx2d = canvas.getContext('2d');
+    const imgData = ctx2d.createImageData(numFrames, maxBin);
+    const logMax = Math.log1p(maxMag) || 1;
+
+    for (let f = 0; f < numFrames; f++) {
+      const mags = frameMags[f];
+      for (let bin = 0; bin < maxBin; bin++) {
+        const v = Math.log1p(mags[bin]) / logMax;
+        const y = maxBin - 1 - bin;
+        const idx = (y * numFrames + f) * 4;
+        imgData.data[idx]     = Math.min(255, v * 120);
+        imgData.data[idx + 1] = Math.min(255, v * 255);
+        imgData.data[idx + 2] = Math.min(255, v * 160);
+        imgData.data[idx + 3] = 255;
+      }
+    }
+    ctx2d.putImageData(imgData, 0, 0);
+    return canvas.toDataURL('image/png');
+  } catch (e) {
+    console.warn('Spectrogram generation failed:', e.message);
+    return null;
+  }
+}
+
+function ensureSpectrogram(fileUrl, forBird) {
+  if (!fileUrl || spectroCache[fileUrl] !== undefined) return;
+  spectroCache[fileUrl] = 'pending';
+  generateSpectrogram(fileUrl).then(dataUrl => {
+    spectroCache[fileUrl] = dataUrl || 'error';
+    if (state.current === forBird) render();
+  });
 }
 
 let currentAudio = null;
@@ -826,7 +930,10 @@ function renderQuiz(app) {
       imgContent = `<div class="img-placeholder"><div class="icon">&#128266;</div><span>Loading call...</span></div>`;
     } else {
       const displayRec = state.audioRec || pool?.[0];
-      const sonoImg = displayRec?.sono ? `<img src="${displayRec.sono}" alt="spectrogram" class="spectro-img"/>` : '';
+      if (displayRec?.file) ensureSpectrogram(displayRec.file, bird);
+      const spectroState = displayRec?.file ? spectroCache[displayRec.file] : undefined;
+      const sonoImg = (spectroState && spectroState !== 'pending' && spectroState !== 'error')
+        ? `<img src="${spectroState}" alt="spectrogram" class="spectro-img"/>` : '';
       imgContent = `
         ${sonoImg}
         <button class="audio-box-btn${state.audioPlaying?' playing':''}" onclick="toggleAudio()" aria-label="${state.audioPlaying?'Stop call':'Play call'}">
