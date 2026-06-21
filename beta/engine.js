@@ -478,14 +478,30 @@ function ensureSpectrogram(fileUrl, forBird) {
 }
 
 let currentAudio = null;
+let _playheadRAF = null;
+function cancelPlayheadLoop() {
+  if (_playheadRAF) { cancelAnimationFrame(_playheadRAF); _playheadRAF = null; }
+}
+function startPlayheadLoop() {
+  cancelPlayheadLoop();
+  const tick = () => {
+    const el = document.getElementById('spectroPlayhead');
+    if (el && currentAudio && isFinite(currentAudio.duration) && currentAudio.duration > 0) {
+      el.style.left = Math.min(100, (currentAudio.currentTime / currentAudio.duration) * 100) + '%';
+    }
+    if (currentAudio && !currentAudio.paused) _playheadRAF = requestAnimationFrame(tick);
+  };
+  _playheadRAF = requestAnimationFrame(tick);
+}
 function stopAudio() {
+  cancelPlayheadLoop();
   if (currentAudio) { currentAudio.pause(); currentAudio.onended=null; currentAudio=null; }
 }
 function playRecording(rec) {
   stopAudio();
   currentAudio = new Audio(rec.file);
-  currentAudio.onended = () => setState({audioPlaying:false, audioRec:null});
-  currentAudio.play().catch(() => setState({audioPlaying:false, audioRec:null}));
+  currentAudio.onended = () => { cancelPlayheadLoop(); setState({audioPlaying:false, audioRec:null}); };
+  currentAudio.play().then(startPlayheadLoop).catch(() => setState({audioPlaying:false, audioRec:null}));
   setState({audioPlaying:true, audioLoading:false, audioRec:rec});
 }
 function toggleAudio() {
@@ -933,7 +949,7 @@ function renderQuiz(app) {
       if (displayRec?.file) ensureSpectrogram(displayRec.file, bird);
       const spectroState = displayRec?.file ? spectroCache[displayRec.file] : undefined;
       const sonoImg = (spectroState && spectroState !== 'pending' && spectroState !== 'error')
-        ? `<img src="${spectroState}" alt="spectrogram" class="spectro-img"/>` : '';
+        ? `<div class="spectro-wrap"><img src="${spectroState}" alt="spectrogram" class="spectro-img"/><div class="spectro-playhead" id="spectroPlayhead"></div></div>` : '';
       imgContent = `
         ${sonoImg}
         <button class="audio-box-btn${state.audioPlaying?' playing':''}" onclick="toggleAudio()" aria-label="${state.audioPlaying?'Stop call':'Play call'}">
