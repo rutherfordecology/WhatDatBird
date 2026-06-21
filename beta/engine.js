@@ -409,6 +409,8 @@ function fft(real, imag) {
   }
 }
 
+const audioDurationCache = {}; // file URL → duration in seconds (decoded, unlike <audio>.duration which can stay NaN for streamed files)
+
 async function generateSpectrogram(fileUrl) {
   try {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -416,6 +418,7 @@ async function generateSpectrogram(fileUrl) {
     const arrayBuffer = await fetch(fileUrl).then(r => r.arrayBuffer());
     const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
     const channelData = audioBuffer.getChannelData(0);
+    audioDurationCache[fileUrl] = audioBuffer.duration;
     audioCtx.close();
 
     const FFT_SIZE = 1024, HOP = 512, numBins = FFT_SIZE / 2;
@@ -479,6 +482,7 @@ function ensureSpectrogram(fileUrl, forBird) {
 
 let currentAudio = null;
 let _playheadRAF = null;
+let _currentPlaybackFile = null;
 function cancelPlayheadLoop() {
   if (_playheadRAF) { cancelAnimationFrame(_playheadRAF); _playheadRAF = null; }
 }
@@ -486,8 +490,11 @@ function startPlayheadLoop() {
   cancelPlayheadLoop();
   const tick = () => {
     const el = document.getElementById('spectroPlayhead');
-    if (el && currentAudio && isFinite(currentAudio.duration) && currentAudio.duration > 0) {
-      el.style.left = Math.min(100, (currentAudio.currentTime / currentAudio.duration) * 100) + '%';
+    // <audio>.duration can stay NaN/Infinity for streamed files for several seconds (or
+    // indefinitely) — prefer the duration decodeAudioData already gave us for the spectrogram.
+    const dur = audioDurationCache[_currentPlaybackFile] ?? currentAudio?.duration;
+    if (el && currentAudio && isFinite(dur) && dur > 0) {
+      el.style.left = Math.min(100, (currentAudio.currentTime / dur) * 100) + '%';
     }
     if (currentAudio && !currentAudio.paused) _playheadRAF = requestAnimationFrame(tick);
   };
@@ -499,6 +506,7 @@ function stopAudio() {
 }
 function playRecording(rec) {
   stopAudio();
+  _currentPlaybackFile = rec.file;
   currentAudio = new Audio(rec.file);
   currentAudio.onended = () => { cancelPlayheadLoop(); setState({audioPlaying:false, audioRec:null}); };
   currentAudio.play().then(startPlayheadLoop).catch(() => setState({audioPlaying:false, audioRec:null}));
@@ -1050,7 +1058,7 @@ function renderQuiz(app) {
         <div class="streak-dots">${dots}</div>
         <span class="streak-label">&#128293; ${state.streak}/${STREAK_TARGET}</span>
       </div>
-      <div class="img-box" id="imgBox" ontouchstart="_swipeX=event.touches[0].clientX" ontouchend="if(Math.abs(event.changedTouches[0].clientX-_swipeX)>40){event.changedTouches[0].clientX<_swipeX?nextPhoto():prevPhoto()}">${imgContent}${overlay}${carousel}</div>
+      <div class="img-box${CFG.audioOnly?' img-box-audio':''}" id="imgBox" ontouchstart="_swipeX=event.touches[0].clientX" ontouchend="if(Math.abs(event.changedTouches[0].clientX-_swipeX)>40){event.changedTouches[0].clientX<_swipeX?nextPhoto():prevPhoto()}">${imgContent}${overlay}${carousel}</div>
       <p class="question-text">${CFG.audioOnly ? '&#128266; Which bird is calling?' : '&#128269; Which bird is this?'}${audioBtnHtml}</p>
       ${audioCreditHtml}
       <div class="options">${optionsHtml}</div>
