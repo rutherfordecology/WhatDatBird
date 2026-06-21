@@ -500,7 +500,7 @@
       "description": "Birds near The Forks, West Coast",
       "species": null,
       "type": "dynamic",
-      "url": "quiz.html?lat=-43.25227&lng=170.2632&place_name=Birds%20near%20The%20Forks%2C%20West%20Coast&country_code=NZ",
+      "url": "quiz.html?lat=-43.25227&lng=170.2632&place_name=Birds%20near%20The%20Forks%2C%20West%20Coast&country_code=NZ&mode=audio",
       "coord_lat": -43.25227,
       "coord_lng": 170.2632,
       "photo_taxon": "Petroica macrocephala",
