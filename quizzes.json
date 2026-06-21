@@ -143,6 +143,8 @@
       "type": "dynamic",
       "url": "quiz.html?place_id=6803&place_name=New%20Zealand",
       "place_id": 6803,
+      "coord_lat": -41.5,
+      "coord_lng": 173.5,
       "photo_taxon": "Prosthemadera novaeseelandiae",
       "added": "2026-06-08"
     },
