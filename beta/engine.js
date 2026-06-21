@@ -353,7 +353,7 @@ async function fetchXenoCanto(latin) {
     const proto = u => u && (u.startsWith('//') ? 'https:'+u : u);
     const pool = (d.recordings||[])
       .filter(rec => rec.file)
-      .map(rec => ({ file: proto(rec.file), recordist: rec.rec || 'Unknown', url: proto(rec.url) || 'https://xeno-canto.org' }));
+      .map(rec => ({ file: proto(rec.file), recordist: rec.rec || 'Unknown', url: proto(rec.url) || 'https://xeno-canto.org', sono: proto(rec.sono?.med || rec.sono?.small || rec.sono?.large) || null }));
     xenoCantoCache[latin] = pool.length ? pool : null;
     return xenoCantoCache[latin]?.[0] || null;
   } catch { xenoCantoCache[latin]=null; return null; }
@@ -810,16 +810,34 @@ function renderQuiz(app) {
     return `<div class="${h===true?'dot correct':h===false?'dot wrong':'dot'}">${h===true?'&#11088;':h===false?'&#10005;':''}</div>`;
   }).join('');
 
-  let imgContent;
-  if(state.imgLoading) imgContent=`<div class="img-placeholder"><div class="icon">&#128247;</div><span>Loading...</span></div>`;
-  else if(state.imgUrl) imgContent=`<img src="${state.imgUrl}" alt="mystery bird" onerror="imgFailed()" onload="adjustImgPosition(this)"/>`;
-  else imgContent=`<div class="img-placeholder"><div class="icon">&#128247;</div><span>No photo available</span></div>`;
+  let imgContent, carousel = '';
+  if (CFG.audioOnly) {
+    const audioLatin = bird.latin || bird.name;
+    const pool = xenoCantoCache[audioLatin];
+    const hasMultiple = (pool?.length || 0) > 1;
+    if (state.audioLoading) {
+      imgContent = `<div class="img-placeholder"><div class="icon">&#128266;</div><span>Loading call...</span></div>`;
+    } else {
+      const displayRec = state.audioRec || pool?.[0];
+      const sonoImg = displayRec?.sono ? `<img src="${displayRec.sono}" alt="spectrogram" class="spectro-img"/>` : '';
+      imgContent = `
+        ${sonoImg}
+        <button class="audio-box-btn${state.audioPlaying?' playing':''}" onclick="toggleAudio()" aria-label="${state.audioPlaying?'Stop call':'Play call'}">
+          ${state.audioPlaying?'&#9208;&#65039;':'&#128266;'}
+        </button>
+        ${hasMultiple?'<button class="carousel-btn carousel-next" onclick="nextAudio()" title="Different recording">&#8635;</button>':''}`;
+    }
+  } else {
+    if(state.imgLoading) imgContent=`<div class="img-placeholder"><div class="icon">&#128247;</div><span>Loading...</span></div>`;
+    else if(state.imgUrl) imgContent=`<img src="${state.imgUrl}" alt="mystery bird" onerror="imgFailed()" onload="adjustImgPosition(this)"/>`;
+    else imgContent=`<div class="img-placeholder"><div class="icon">&#128247;</div><span>No photo available</span></div>`;
 
-  const multi = state.photoUrls.length>1 && !state.imgLoading;
-  const carousel = multi ? `
-    <button class="carousel-btn carousel-prev" onclick="prevPhoto()">&#8249;</button>
-    <button class="carousel-btn carousel-next" onclick="nextPhoto()">&#8250;</button>
-    <div class="carousel-dots">${state.photoUrls.map((_,i)=>`<div class="carousel-dot ${i===state.photoIdx?'active':''}" onclick="goPhoto(${i})"></div>`).join('')}</div>` : '';
+    const multi = state.photoUrls.length>1 && !state.imgLoading;
+    carousel = multi ? `
+      <button class="carousel-btn carousel-prev" onclick="prevPhoto()">&#8249;</button>
+      <button class="carousel-btn carousel-next" onclick="nextPhoto()">&#8250;</button>
+      <div class="carousel-dots">${state.photoUrls.map((_,i)=>`<div class="carousel-dot ${i===state.photoIdx?'active':''}" onclick="goPhoto(${i})"></div>`).join('')}</div>` : '';
+  }
 
   let overlay='';
   if(state.selected) {
@@ -880,10 +898,12 @@ function renderQuiz(app) {
   const audioLatin = bird.latin || bird.name;
   const audioRecAvailable = audioLatin ? xenoCantoCache[audioLatin] : null;
   if (audioRecAvailable) {
-    const icon = state.audioPlaying ? '&#9208;&#65039;' : '&#128266;';
-    const hasMultiple = xenoCantoCache[audioLatin]?.length > 1;
-    const nextBtn = hasMultiple ? `<button class="audio-btn" onclick="nextAudio()" title="Different recording" aria-label="Next recording" style="margin-left:4px;font-size:0.75rem;">&#8635;</button>` : '';
-    audioBtnHtml = `<button class="audio-btn${state.audioPlaying?' playing':''}" onclick="toggleAudio()" title="${state.audioPlaying?'Stop call':'Play call'}" aria-label="Play bird call">${icon}</button>${nextBtn}`;
+    if (!CFG.audioOnly) {
+      const icon = state.audioPlaying ? '&#9208;&#65039;' : '&#128266;';
+      const hasMultiple = xenoCantoCache[audioLatin]?.length > 1;
+      const nextBtn = hasMultiple ? `<button class="audio-btn" onclick="nextAudio()" title="Different recording" aria-label="Next recording" style="margin-left:4px;font-size:0.75rem;">&#8635;</button>` : '';
+      audioBtnHtml = `<button class="audio-btn${state.audioPlaying?' playing':''}" onclick="toggleAudio()" title="${state.audioPlaying?'Stop call':'Play call'}" aria-label="Play bird call">${icon}</button>${nextBtn}`;
+    }
     const displayRec = state.audioRec || audioRecAvailable[0];
     audioCreditHtml = `<p class="audio-credit">&#127925; Recording by <a href="${displayRec.url}" target="_blank">${displayRec.recordist}</a> via <a href="https://xeno-canto.org" target="_blank">xeno-canto.org</a></p>`;
   }
@@ -901,7 +921,7 @@ function renderQuiz(app) {
         <span class="streak-label">&#128293; ${state.streak}/${STREAK_TARGET}</span>
       </div>
       <div class="img-box" id="imgBox" ontouchstart="_swipeX=event.touches[0].clientX" ontouchend="if(Math.abs(event.changedTouches[0].clientX-_swipeX)>40){event.changedTouches[0].clientX<_swipeX?nextPhoto():prevPhoto()}">${imgContent}${overlay}${carousel}</div>
-      <p class="question-text">&#128269; Which bird is this?${audioBtnHtml}</p>
+      <p class="question-text">${CFG.audioOnly ? '&#128266; Which bird is calling?' : '&#128269; Which bird is this?'}${audioBtnHtml}</p>
       ${audioCreditHtml}
       <div class="options">${optionsHtml}</div>
       ${fieldNote}
@@ -1123,14 +1143,13 @@ function renderAbout(app, header) {
 
 // ── Actions ───────────────────────────────────────────────────────────────
 function adjustImgPosition(img) {
-  // On narrow phones the CSS fixes the box height, so skip inline height overrides
-  if (window.innerWidth <= 500) return;
   const isPortrait = img.naturalWidth < img.naturalHeight;
   if(isPortrait) {
-    const fullH = img.offsetWidth/(img.naturalWidth/img.naturalHeight);
-    img.style.height=(fullH*0.7)+'px'; img.style.objectPosition='center 15%';
+    img.style.height='100%'; img.style.maxHeight=''; img.style.objectFit='contain'; img.style.objectPosition='center center'; img.style.transform='scale(1.1)';
+  } else if (window.innerWidth <= 500) {
+    img.style.height='100%'; img.style.maxHeight=''; img.style.objectFit='cover'; img.style.objectPosition='center center'; img.style.transform='';
   } else {
-    img.style.height='auto'; img.style.maxHeight='65vw'; img.style.objectPosition='center center';
+    img.style.height='auto'; img.style.maxHeight='65vw'; img.style.objectFit='cover'; img.style.objectPosition='center center'; img.style.transform='';
   }
 }
 function imgFailed() {
@@ -1166,6 +1185,8 @@ function slidePhoto(newIdx, dir) {
     newImg.style.cssText = '';
     newImg.className = '';
     box.style.height = '';
+    if (newImg.complete) adjustImgPosition(newImg);
+    else newImg.onload = () => adjustImgPosition(newImg);
     state.photoIdx = newIdx;
     state.imgUrl = state.photoUrls[newIdx];
     box.querySelectorAll('.carousel-dot').forEach((d,i) => d.classList.toggle('active', i===newIdx));
@@ -1216,12 +1237,23 @@ function startQuiz() {
   const pool=getPool();
   const queue=buildQueue(pool);
   const first=queue.shift();
-  setState({phase:'quiz',queue,wrongBin:[],current:first,streak:0,streakHistory:[],totalSeen:0,totalCorrect:0,roundsCompleted:0,selected:null,imgUrl:null,imgLoading:true,photoUrls:[],photoIdx:0,options:getOptions(first,pool)});
+  setState({phase:'quiz',queue,wrongBin:[],current:first,streak:0,streakHistory:[],totalSeen:0,totalCorrect:0,roundsCompleted:0,selected:null,imgUrl:null,imgLoading:!CFG.audioOnly,photoUrls:[],photoIdx:0,options:getOptions(first,pool),audioPlaying:false,audioLoading:!!CFG.audioOnly,audioRec:null});
+  if (CFG.audioOnly) { loadAudioQuestion(first); return; }
   fetchImage(first, state.mode).then(url => {
     const all=(inatPhotoCache[first.latin||first.name]||[]).slice(0,5);
     const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;
     if (!url && !photoUrls.length) { logNoPhoto(first); _advance(); return; }
     setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});
+  });
+}
+
+// Audio-only mode: skip birds with no usable Xeno-canto recording, autoplay on load
+function loadAudioQuestion(bird) {
+  fetchXenoCanto(bird.latin || bird.name).then(rec => {
+    if (state.current !== bird) return;
+    if (!rec) { _advance(); return; }
+    setState({audioLoading:false});
+    playRecording(rec);
   });
 }
 
@@ -1258,7 +1290,9 @@ function _advance() {
   if(queue.length===0&&wrongBin.length===0){setState({phase:'result'});return;}
 
   const WRONG_GAP = 3;
-  const eligible = wrongBin.filter(w => state.totalSeen - w.wrongAt >= WRONG_GAP);
+  const eligible = queue.length === 0
+    ? wrongBin
+    : wrongBin.filter(w => state.totalSeen - w.wrongAt >= WRONG_GAP);
   const insertWrong = eligible.length > 0 && (queue.length === 0 || state.totalSeen % 3 === 0);
 
   stopAudio();
@@ -1275,23 +1309,27 @@ function _advance() {
       queue.splice(Math.min(Math.floor(Math.random()*4)+1,queue.length),0,pick.bird);
     }
   }
-  setState({current:next,queue,wrongBin,selected:null,imgUrl:null,imgLoading:true,photoUrls:[],photoIdx:0,options:getOptions(next,pool),audioPlaying:false,audioLoading:false,audioRec:null});
-  fetchImage(next, state.mode).then(url => {
-    const all=(inatPhotoCache[next.latin||next.name]||[]).slice(0,5);
-    const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;
-    if (!url && !photoUrls.length) {
-      logNoPhoto(next);
-      _advance();
-      return;
-    }
-    setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});
-  });
-  // Prefetch current bird's field note + call audio, and next bird's photos + note + audio
+  setState({current:next,queue,wrongBin,selected:null,imgUrl:null,imgLoading:!CFG.audioOnly,photoUrls:[],photoIdx:0,options:getOptions(next,pool),audioPlaying:false,audioLoading:!!CFG.audioOnly,audioRec:null});
   if (next.wikiUrl && !next.note) fetchIDNote(next.wikiUrl).catch(() => {});
-  fetchXenoCanto(next.latin || next.name).then(rec => { if (rec && state.current === next) render(); }).catch(() => {});
+  if (CFG.audioOnly) {
+    loadAudioQuestion(next);
+  } else {
+    fetchImage(next, state.mode).then(url => {
+      const all=(inatPhotoCache[next.latin||next.name]||[]).slice(0,5);
+      const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;
+      if (!url && !photoUrls.length) {
+        logNoPhoto(next);
+        _advance();
+        return;
+      }
+      setState({imgUrl:url,imgLoading:false,photoUrls,photoIdx:0});
+    });
+    // Prefetch current bird's call audio (supplemental, not required)
+    fetchXenoCanto(next.latin || next.name).then(rec => { if (rec && state.current === next) render(); }).catch(() => {});
+  }
   const prefetchBird = queue[0] || wrongBin[0]?.bird;
   if (prefetchBird) {
-    fetchInatImage(prefetchBird).catch(() => {});
+    if (!CFG.audioOnly) fetchInatImage(prefetchBird).catch(() => {});
     if (prefetchBird.wikiUrl && !prefetchBird.note) fetchIDNote(prefetchBird.wikiUrl).catch(() => {});
     fetchXenoCanto(prefetchBird.latin || prefetchBird.name).catch(() => {});
   }

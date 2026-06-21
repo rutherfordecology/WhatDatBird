@@ -115,6 +115,8 @@
   .map-place-name { font-size:0.9rem; font-weight:700; color:#1c1b18; }
   .map-place-type { font-size:0.72rem; color:#9b9890; margin-top:1px; }
   .map-place-go { font-size:0.75rem; font-weight:800; color:#2a7a58; white-space:nowrap; }
+  .map-audio-toggle { display:flex; align-items:center; gap:5px; font-size:0.72rem; color:#5a584f; white-space:nowrap; cursor:pointer; }
+  .map-audio-toggle input { cursor:pointer; }
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -388,10 +390,11 @@ async function adminDelete(url) {
 function goPlace(id, name) {
   window.location.href = `quiz.html?place_id=${id}&place_name=${encodeURIComponent(name)}`;
 }
-function goCoords(lat, lng, name, countryCode) {
+function goCoords(lat, lng, name, countryCode, audioOnly) {
   const label = prompt('What do you want to call this quiz?', name) ?? name;
   let url = `quiz.html?lat=${lat.toFixed(5)}&lng=${lng.toFixed(5)}&place_name=${encodeURIComponent(label.trim() || name)}`;
   if (countryCode) url += `&country_code=${countryCode}`;
+  if (audioOnly) url += `&mode=audio`;
   window.location.href = url;
 }
 
@@ -408,10 +411,15 @@ const TYPE_LABEL = {
 };
 
 // Initialise the combined map immediately on page load
-pickMap = L.map('mainMap').setView([20, 0], 2);
+pickMap = L.map('mainMap', {
+  minZoom: 2,
+  maxBounds: [[-90, -180], [90, 180]],
+  maxBoundsViscosity: 1.0
+}).setView([20, 0], 2);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-  maxZoom: 18
+  maxZoom: 18,
+  noWrap: true
 }).addTo(pickMap);
 pickMap.on('click', onMapClick);
 
@@ -546,6 +554,9 @@ function renderPlaceList(places, coordOption) {
         <div class="map-place-name">&#x1F4CD; ${coordOption.display_name}</div>
         <div class="map-place-type" id="coordSubtitle">Starting ~100m · expands until 25+ species found</div>
       </div>
+      <label class="map-audio-toggle" onclick="event.stopPropagation()">
+        <input type="checkbox" id="coordAudioOnly">&#128266; Audio only
+      </label>
       <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
     </div>` : '';
 
@@ -583,7 +594,8 @@ function attachPlaceListeners() {
     });
     el.addEventListener('click', () => goCoords(
       parseFloat(el.dataset.lat), parseFloat(el.dataset.lng),
-      el.dataset.name, el.dataset.cc
+      el.dataset.name, el.dataset.cc,
+      document.getElementById('coordAudioOnly')?.checked
     ));
   });
 }
