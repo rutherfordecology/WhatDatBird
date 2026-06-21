@@ -492,6 +492,21 @@
       "lat": 49.2702552818,
       "lng": -122.8992685499,
       "added": "2026-06-20"
+    },
+    {
+      "name": "WhatDatBird? - Birds near The Forks, West Coast",
+      "continent": "Oceania",
+      "country": "New Zealand",
+      "description": "Birds near The Forks, West Coast",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-43.25227&lng=170.2632&place_name=Birds%20near%20The%20Forks%2C%20West%20Coast&country_code=NZ",
+      "coord_lat": -43.25227,
+      "coord_lng": 170.2632,
+      "photo_taxon": "Petroica macrocephala",
+      "lat": -43.25227,
+      "lng": 170.2632,
+      "added": "2026-06-21"
     }
   ]
 }
