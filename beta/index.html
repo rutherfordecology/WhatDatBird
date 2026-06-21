@@ -417,15 +417,17 @@ const TYPE_LABEL = {
 };
 
 // Initialise the combined map immediately on page load
+// Centred further east (Pacific-ish) with extra lng buffer past +/-180 so places near the
+// dateline (NZ, Pacific islands) aren't pinned against a hard edge with no breathing room.
 pickMap = L.map('mainMap', {
   minZoom: 2,
-  maxBounds: [[-90, -180], [90, 180]],
+  maxBounds: [[-90, -270], [90, 270]],
   maxBoundsViscosity: 1.0
-}).setView([20, 0], 2);
+}).setView([10, 140], 2);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   maxZoom: 18,
-  noWrap: true
+  noWrap: false
 }).addTo(pickMap);
 pickMap.on('click', onMapClick);
 
