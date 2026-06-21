@@ -1409,7 +1409,17 @@ function startQuiz() {
   const queue=buildQueue(pool);
   const first=queue.shift();
   setState({phase:'quiz',queue,wrongBin:[],current:first,streak:0,streakHistory:[],totalSeen:0,totalCorrect:0,roundsCompleted:0,selected:null,imgUrl:null,imgLoading:!CFG.audioOnly,photoUrls:[],photoIdx:0,options:getOptions(first,pool),audioPlaying:false,audioLoading:!!CFG.audioOnly,audioRec:null});
-  if (CFG.audioOnly) { loadAudioQuestion(first); return; }
+  if (CFG.audioOnly) {
+    loadAudioQuestion(first);
+    if (queue[0]) {
+      fetchXenoCanto(queue[0].latin || queue[0].name).then(rec => {
+        if (!rec) return;
+        loadAudioResource(rec.file).catch(() => {});
+        ensureSpectrogram(rec.file, queue[0]);
+      }).catch(() => {});
+    }
+    return;
+  }
   fetchImage(first, state.mode).then(url => {
     const all=(inatPhotoCache[first.latin||first.name]||[]).slice(0,5);
     const photoUrls=url?[url,...all.filter(u=>u!==url)].slice(0,5):all;
@@ -1500,9 +1510,19 @@ function _advance() {
   }
   const prefetchBird = queue[0] || wrongBin[0]?.bird;
   if (prefetchBird) {
-    if (!CFG.audioOnly) fetchInatImage(prefetchBird).catch(() => {});
     if (prefetchBird.wikiUrl && !prefetchBird.note) fetchIDNote(prefetchBird.wikiUrl).catch(() => {});
-    fetchXenoCanto(prefetchBird.latin || prefetchBird.name).catch(() => {});
+    if (CFG.audioOnly) {
+      // Download the next bird's audio (and build its spectrogram) while the current one
+      // is still playing, so there's no fetch-and-wait delay when the user advances.
+      fetchXenoCanto(prefetchBird.latin || prefetchBird.name).then(rec => {
+        if (!rec) return;
+        loadAudioResource(rec.file).catch(() => {});
+        ensureSpectrogram(rec.file, prefetchBird);
+      }).catch(() => {});
+    } else {
+      fetchInatImage(prefetchBird).catch(() => {});
+      fetchXenoCanto(prefetchBird.latin || prefetchBird.name).catch(() => {});
+    }
   }
 }
 
