@@ -353,7 +353,14 @@ async function fetchXenoCanto(latin) {
     const proto = u => u && (u.startsWith('//') ? 'https:'+u : u);
     const pool = (d.recordings||[])
       .filter(rec => rec.file)
-      .map(rec => ({ file: proto(rec.file), recordist: rec.rec || 'Unknown', url: proto(rec.url) || 'https://xeno-canto.org', sono: proto(rec.sono?.med || rec.sono?.small || rec.sono?.large) || null }));
+      .map(rec => {
+        const sonoUrl = proto(rec.sono?.med || rec.sono?.small || rec.sono?.large);
+        return {
+          file: proto(rec.file), recordist: rec.rec || 'Unknown', url: proto(rec.url) || 'https://xeno-canto.org',
+          // Routed through our Worker — xeno-canto's image host 503s on direct hotlinked requests
+          sono: sonoUrl ? `${XC_PROXY}/?sono=${encodeURIComponent(sonoUrl)}` : null,
+        };
+      });
     xenoCantoCache[latin] = pool.length ? pool : null;
     return xenoCantoCache[latin]?.[0] || null;
   } catch { xenoCantoCache[latin]=null; return null; }
