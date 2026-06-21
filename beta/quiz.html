@@ -461,7 +461,7 @@ async function boot() {
 
     if (COUNTRY_CODE) {
       try {
-        const cnr = await fetch(`place-names/${COUNTRY_CODE}.json`);
+        const cnr = await fetch(`place-names/${COUNTRY_CODE}.json?_=${Date.now()}`);
         if (cnr.ok) { placeNames = await cnr.json(); }
       } catch {}
     }
@@ -496,7 +496,7 @@ async function boot() {
 
     if (COUNTRY_CODE) {
       try {
-        const cnr = await fetch(`place-names/${COUNTRY_CODE}.json`);
+        const cnr = await fetch(`place-names/${COUNTRY_CODE}.json?_=${Date.now()}`);
         if (cnr.ok) { placeNames = await cnr.json(); }
       } catch {}
     }
@@ -549,7 +549,7 @@ async function boot() {
 
   // ── Normal place_id mode ──────────────────────────────────────────────────
   try {
-    const pnr = await fetch(`place-names/${PLACE_ID}.json`);
+    const pnr = await fetch(`place-names/${PLACE_ID}.json?_=${Date.now()}`);
     if (pnr.ok) { placeNames = await pnr.json(); }
   } catch {}
   CFG.indigenousField = 'indigenousName';
@@ -566,7 +566,7 @@ async function boot() {
 
   if (!placeNames && COUNTRY_CODE) {
     try {
-      const cnr = await fetch(`place-names/${COUNTRY_CODE}.json`);
+      const cnr = await fetch(`place-names/${COUNTRY_CODE}.json?_=${Date.now()}`);
       if (cnr.ok) { placeNames = await cnr.json(); }
     } catch {}
   }

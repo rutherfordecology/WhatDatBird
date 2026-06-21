@@ -480,6 +480,7 @@ function ensureSpectrogram(fileUrl, forBird) {
   });
 }
 
+const SPECTRO_PX_PER_SEC = 140;
 let currentAudio = null;
 let _playheadRAF = null;
 let _currentPlaybackFile = null;
@@ -489,12 +490,9 @@ function cancelPlayheadLoop() {
 function startPlayheadLoop() {
   cancelPlayheadLoop();
   const tick = () => {
-    const el = document.getElementById('spectroPlayhead');
-    // <audio>.duration can stay NaN/Infinity for streamed files for several seconds (or
-    // indefinitely) — prefer the duration decodeAudioData already gave us for the spectrogram.
-    const dur = audioDurationCache[_currentPlaybackFile] ?? currentAudio?.duration;
-    if (el && currentAudio && isFinite(dur) && dur > 0) {
-      el.style.left = Math.min(100, (currentAudio.currentTime / dur) * 100) + '%';
+    const el = document.getElementById('spectroImg');
+    if (el && currentAudio) {
+      el.style.transform = `translateX(${-currentAudio.currentTime * SPECTRO_PX_PER_SEC}px)`;
     }
     if (currentAudio && !currentAudio.paused) _playheadRAF = requestAnimationFrame(tick);
   };
@@ -508,14 +506,17 @@ function playRecording(rec) {
   stopAudio();
   _currentPlaybackFile = rec.file;
   currentAudio = new Audio(rec.file);
-  currentAudio.onended = () => { cancelPlayheadLoop(); setState({audioPlaying:false, audioRec:null}); };
-  currentAudio.play().then(startPlayheadLoop).catch(() => setState({audioPlaying:false, audioRec:null}));
+  currentAudio.onended = () => { cancelPlayheadLoop(); setState({audioPlaying:false}); };
+  currentAudio.play().then(startPlayheadLoop).catch(() => setState({audioPlaying:false}));
   setState({audioPlaying:true, audioLoading:false, audioRec:rec});
 }
 function toggleAudio() {
   const bird = state.current;
   if (!bird) return;
-  if (state.audioPlaying) { stopAudio(); setState({audioPlaying:false, audioRec:null}); return; }
+  // Keep audioRec on stop so the displayed spectrogram and a later restart both refer to
+  // the same recording — previously this cleared audioRec, and restarting picked a random
+  // recording while the spectrogram still showed whichever one rendered first.
+  if (state.audioPlaying) { stopAudio(); setState({audioPlaying:false}); return; }
   const latin = bird.latin || bird.name;
   const cached = xenoCantoCache[latin];
   if (cached === undefined) {
@@ -527,7 +528,8 @@ function toggleAudio() {
     });
     return;
   }
-  if (cached) playRecording(randomXenoRec(latin, null));
+  const rec = state.audioRec || cached?.[0];
+  if (rec) playRecording(rec);
 }
 function nextAudio() {
   const bird = state.current;
@@ -956,8 +958,13 @@ function renderQuiz(app) {
       const displayRec = state.audioRec || pool?.[0];
       if (displayRec?.file) ensureSpectrogram(displayRec.file, bird);
       const spectroState = displayRec?.file ? spectroCache[displayRec.file] : undefined;
-      const sonoImg = (spectroState && spectroState !== 'pending' && spectroState !== 'error')
-        ? `<div class="spectro-wrap"><img src="${spectroState}" alt="spectrogram" class="spectro-img"/><div class="spectro-playhead" id="spectroPlayhead"></div></div>` : '';
+      const dur = displayRec?.file ? audioDurationCache[displayRec.file] : null;
+      // The image scrolls under a fixed center line, rather than sliding a line across a
+      // static image — width is duration*SPECTRO_PX_PER_SEC so elapsed time maps to pixels.
+      const imgWidthPx = dur ? Math.max(1, dur * SPECTRO_PX_PER_SEC) : null;
+      const sonoImg = (spectroState && spectroState !== 'pending' && spectroState !== 'error' && imgWidthPx)
+        ? `<div class="spectro-wrap"><img id="spectroImg" src="${spectroState}" alt="spectrogram" class="spectro-img" style="width:${imgWidthPx}px"/></div>
+           <div class="spectro-playhead"></div>` : '';
       imgContent = `
         ${sonoImg}
         <button class="audio-box-btn${state.audioPlaying?' playing':''}" onclick="toggleAudio()" aria-label="${state.audioPlaying?'Stop call':'Play call'}">
