@@ -71,9 +71,26 @@
   .card-img { height: 150px; background: #eeede8; overflow: hidden; display: flex; align-items: center; justify-content: center; }
   .card-img img { width: 100%; height: 100%; object-fit: cover; object-position: center top; }
   .card-img-ph { font-size: 3rem; color: #c8c6bc; }
+  .continent-header {
+    display: flex; align-items: center; gap: 8px; width: 100%; max-width: 1400px;
+    margin: 0 auto; padding: 12px 20px; background: none; border: none; cursor: pointer;
+    font-family: inherit; text-align: left; font-size: 0.7rem; font-weight: 800;
+    letter-spacing: 0.12em; text-transform: uppercase; color: #9b9890;
+  }
+  .continent-header:hover { color: #1a5940; }
+  .continent-arrow { display: inline-block; transition: transform 0.15s; font-size: 0.7rem; }
+  .continent-block.open .continent-arrow { transform: rotate(90deg); }
+  .continent-count { font-weight: 600; color: #c8c6bc; text-transform: none; letter-spacing: normal; }
+  .continent-content { display: none; }
+  .continent-block.open .continent-content { display: block; }
   @media (max-width: 600px) {
-    .card-img { height: 50px; }
-    .card-img-ph { font-size: 1.6rem; }
+    .cards-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 0 12px; }
+    .card-img { height: auto; aspect-ratio: 1 / 1; }
+    .card-img-ph { font-size: 2.2rem; }
+    .card-body { padding: 8px 10px; }
+    .card-name { font-size: 0.82rem; margin-bottom: 2px; }
+    .card-sub { font-size: 0.68rem; margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .card-meta { padding-right: 0; }
   }
   .card-body { padding: 14px 16px; position: relative; }
   .card-name { font-size: 1.1rem; font-weight: 900; color: #1a5940; margin-bottom: 3px; }
@@ -220,7 +237,11 @@ async function loadLibrary() {
     const continents = CONTINENT_ORDER.filter(c => groups[c]);
     for (const continent of continents) {
       const quizzesInContinent = groups[continent];
-      html += `<div class="section-label">${continent}</div>`;
+      html += `<div class="continent-block">
+        <button class="continent-header" onclick="this.parentElement.classList.toggle('open')">
+          <span class="continent-arrow">&#9656;</span> ${continent} <span class="continent-count">(${quizzesInContinent.length})</span>
+        </button>
+        <div class="continent-content">`;
 
       if (quizzesInContinent.length > 10) {
         const byCountry = {};
@@ -240,6 +261,7 @@ async function loadLibrary() {
         for (const q of quizzesInContinent) html += cardHtml(q);
         html += `</div>`;
       }
+      html += `</div></div>`;
     }
     lib.innerHTML = html;
 
