@@ -23,17 +23,7 @@ window.onunhandledrejection = e => {
 </script>
 <div id="app"></div>
 <script src="version.js"></script>
-<script>
-  var v = typeof APP_VERSION !== 'undefined' ? APP_VERSION : Date.now();
-  var engineScript = document.createElement('script');
-  engineScript.src = `engine.js?v=${v}`;
-  engineScript.async = false;
-  engineScript.onerror = function () {
-    window.__fatalErrorShown = true;
-    document.getElementById('app').innerHTML = '<div style="padding:2rem;font-family:sans-serif;color:#8a2c2c">Failed to fetch engine.js — check network connection.<br><br><a href="index.html">← Back</a></div>';
-  };
-  document.currentScript.parentNode.insertBefore(engineScript, document.currentScript.nextSibling);
-</script>
+<script src="engine.js?v=v6.37" onerror="window.__fatalErrorShown=true;document.getElementById('app').innerHTML='&lt;div style=padding:2rem;font-family:sans-serif;color:#8a2c2c&gt;Failed to fetch engine.js — check network connection.&lt;br&gt;&lt;br&gt;&lt;a href=index.html&gt;← Back&lt;/a&gt;&lt;/div&gt;'"></script>
 <script>
 const params     = new URLSearchParams(window.location.search);
 const PLACE_ID   = params.get('place_id');
