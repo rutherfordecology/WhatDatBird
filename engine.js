@@ -325,7 +325,7 @@ async function fetchIDNote(wikiUrl) {
         const extract = Object.values(extD.query.pages)[0]?.extract || '';
         const skipPat = /\b(found in|native to|endemic to|range[sd]?( from| across| throughout)?|distribut|taxonom|classif|synonym|named (after|by|for)|family \w+idae|order \w+iformes|conspecific|iucn)\b/i;
         const idPat = /\b(cm|mm|inch|length|wingspan|plumage|feather|crown|mantle|breast|belly|throat|nape|back|wing|tail|bill|beak|eye|leg|foot|colour|color|white|black|brown|grey|gray|green|blue|red|yellow|orange|rufous|chestnut|olive|buff|pale|dark|bright|glossy|streak|spot|stripe|band|patch|underpart|upperpart|adult|male|female|juvenile|immature)\b/i;
-        const sentences = extract.replace(/\n+/g,' ').split(/(?<=[.!?])\s+/);
+        const sentences = extract.replace(/\n+/g,' ').match(/[^.!?]+[.!?]+(\s+|$)/g) || [extract];
         const long = sentences.filter(s => s.trim().length > 40);
         const idSents = long.filter(s => idPat.test(s) && !skipPat.test(s));
         const fallback = long.filter(s => !skipPat.test(s));
