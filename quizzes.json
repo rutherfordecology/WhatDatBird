@@ -524,6 +524,21 @@
       "lat": -38.6732,
       "lng": 177.95936,
       "added": "2026-06-21"
+    },
+    {
+      "name": "WhatDatBird? - Birds near Tiapapata (Audio)",
+      "continent": "Oceania",
+      "country": "Samoa",
+      "description": "Birds near Tiapapata (Audio)",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-13.89758&lng=-171.78061&place_name=Birds%20near%20Tiapapata&country_code=WS&mode=audio",
+      "coord_lat": -13.89758,
+      "coord_lng": -171.78061,
+      "photo_taxon": "Gallirallus philippensis",
+      "lat": -13.89758,
+      "lng": -171.78061,
+      "added": "2026-06-22"
     }
   ]
 }
