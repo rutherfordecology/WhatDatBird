@@ -511,10 +511,10 @@
       "added": "2026-06-21"
     },
     {
-      "name": "WhatDatBird? - Sisterson Lagoon (Audio)",
+      "name": "WhatDatBird? - Sisterson Lagoon",
       "continent": "Oceania",
       "country": "New Zealand",
-      "description": "Sisterson Lagoon (Audio)",
+      "description": "Sisterson Lagoon",
       "species": null,
       "type": "dynamic",
       "url": "quiz.html?lat=-38.6732&lng=177.95936&place_name=Sisterson%20Lagoon&country_code=NZ&mode=audio",
