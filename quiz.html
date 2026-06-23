@@ -375,6 +375,11 @@ async function fetchIndigenousNames(baseUrl, locale) {
 
 async function fetchLocalNames(birds) {
   if (!USER_LOCALE || USER_LOCALE === 'en') return;
+  // Only show the player's device-language name when it matches the locale of the
+  // place being quizzed — otherwise a stale/foreign wdb-locale (e.g. Samoan, left over
+  // from a previous quiz) leaks into unrelated quizzes (e.g. a Spotted Dove in NZ).
+  const placeLocale = COUNTRY_CODE ? COUNTRY_LOCALE[COUNTRY_CODE] : null;
+  if (placeLocale !== USER_LOCALE) return;
   const withId = birds.filter(b => b.inatId);
   if (!withId.length) return;
   const CHUNK = 30;
