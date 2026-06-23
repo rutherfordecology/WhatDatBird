@@ -4,6 +4,10 @@ A bird photo (and call) identification quiz. Pick any place in the world and tes
 
 **Live:** https://rutherfordecology.github.io/WhatDatBird/
 
+## Origin
+
+This started as a quick way to learn the birds of Samoa ahead of a family holiday, then kept growing into the dynamic, any-place-in-the-world quiz it is today. Built entirely with [Claude Code](https://claude.com/claude-code), and a lot of learning along the way.
+
 ## How it works
 
 1. Pick a place — search, drop a pin on the map, or choose from the quiz library.
