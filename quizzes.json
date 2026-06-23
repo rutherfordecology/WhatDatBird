@@ -496,10 +496,10 @@
       "added": "2026-06-20"
     },
     {
-      "name": "WhatDatBird? - Birds near The Forks, West Coast (Audio)",
+      "name": "WhatDatBird? - Birds near The Forks, West Coast",
       "continent": "Oceania",
       "country": "New Zealand",
-      "description": "Birds near The Forks, West Coast (Audio)",
+      "description": "Birds near The Forks, West Coast",
       "species": null,
       "type": "dynamic",
       "url": "quiz.html?lat=-43.25227&lng=170.2632&place_name=Birds%20near%20The%20Forks%2C%20West%20Coast&country_code=NZ&mode=audio",
