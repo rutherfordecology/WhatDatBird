@@ -138,9 +138,6 @@
   .map-place-name { font-size:0.9rem; font-weight:700; color:#1c1b18; }
   .map-place-type { font-size:0.72rem; color:#9b9890; margin-top:1px; }
   .map-place-go { font-size:0.75rem; font-weight:800; color:#2a7a58; white-space:nowrap; }
-  .map-place-actions { display:flex; flex-direction:column; align-items:flex-end; gap:5px; }
-  .map-audio-toggle { display:flex; align-items:center; gap:5px; font-size:0.72rem; color:#5a584f; white-space:nowrap; cursor:pointer; }
-  .map-audio-toggle input { cursor:pointer; }
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -456,16 +453,13 @@ async function adminDelete(url) {
   } catch(e) { alert(`Error: ${e.message}`); }
 }
 
-function goPlace(id, name, audioOnly) {
-  let url = `quiz.html?place_id=${id}&place_name=${encodeURIComponent(name)}`;
-  if (audioOnly) url += `&mode=audio`;
-  window.location.href = url;
+function goPlace(id, name) {
+  window.location.href = `quiz.html?place_id=${id}&place_name=${encodeURIComponent(name)}`;
 }
-function goCoords(lat, lng, name, countryCode, audioOnly) {
+function goCoords(lat, lng, name, countryCode) {
   const label = prompt('What do you want to call this quiz?', name) ?? name;
   let url = `quiz.html?lat=${lat.toFixed(5)}&lng=${lng.toFixed(5)}&place_name=${encodeURIComponent(label.trim() || name)}`;
   if (countryCode) url += `&country_code=${countryCode}`;
-  if (audioOnly) url += `&mode=audio`;
   window.location.href = url;
 }
 
@@ -496,22 +490,13 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(pickMap);
 pickMap.on('click', onMapClick);
 
-const audioMarkerIcon = L.divIcon({
-  className: 'audio-marker-icon',
-  html: `<svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg"><path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z" fill="#8a1f1f" stroke="#5c1212" stroke-width="1"/><circle cx="12.5" cy="12.5" r="5.5" fill="#fff"/></svg>`,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-});
-
 async function addQuizMarkers(quizzes) {
   const coordPromises = quizzes.map(q => resolveQuizCoords(q).then(c => ({ q, c })));
   for (const p of coordPromises) {
     const { q, c } = await p;
     if (!c) continue;
     const label = q.description || q.name.replace('WhatDatBird? - ', '');
-    const isAudio = /mode=audio/.test(q.url);
-    L.marker([c.lat, c.lng], isAudio ? { icon: audioMarkerIcon } : {})
+    L.marker([c.lat, c.lng])
       .addTo(pickMap)
       .bindPopup(`<div style="font-family:system-ui,-apple-system,sans-serif;text-align:center;min-width:130px"><strong style="color:#1a5940;display:block;margin-bottom:6px">${label}</strong><a href="${q.url}" style="color:#1a5940;font-weight:800;text-decoration:none">Play this quiz &#8594;</a></div>`);
   }
@@ -629,12 +614,7 @@ function renderPlaceList(places, coordOption) {
         <div class="map-place-name">${p.display_name}</div>
         <div class="map-place-type">${TYPE_LABEL[p.place_type] || 'Place'}</div>
       </div>
-      <div class="map-place-actions">
-        <label class="map-audio-toggle" onclick="event.stopPropagation()">
-          <input type="checkbox" class="audio-only-cb">&#128266; Audio only
-        </label>
-        <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
-      </div>
+      <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
     </div>`).join('');
 
   const coordHtml = coordOption ? `
@@ -643,12 +623,7 @@ function renderPlaceList(places, coordOption) {
         <div class="map-place-name">&#x1F4CD; ${coordOption.display_name}</div>
         <div class="map-place-type" id="coordSubtitle">Starting ~100m · expands until 25+ species found</div>
       </div>
-      <div class="map-place-actions">
-        <label class="map-audio-toggle" onclick="event.stopPropagation()">
-          <input type="checkbox" class="audio-only-cb">&#128266; Audio only
-        </label>
-        <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
-      </div>
+      <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
     </div>` : '';
 
   placesEl.innerHTML = coordHtml + adminHtml;
@@ -666,7 +641,7 @@ function attachPlaceListeners() {
     el.addEventListener('mouseleave', () => {
       if (firstNamed && el !== firstNamed) showBoundary(firstNamed.dataset.id);
     });
-    el.addEventListener('click', () => goPlace(el.dataset.id, el.dataset.name, el.querySelector('.audio-only-cb')?.checked));
+    el.addEventListener('click', () => goPlace(el.dataset.id, el.dataset.name));
   });
 
   placesEl.querySelectorAll('.map-place-coord').forEach(el => {
@@ -685,8 +660,7 @@ function attachPlaceListeners() {
     });
     el.addEventListener('click', () => goCoords(
       parseFloat(el.dataset.lat), parseFloat(el.dataset.lng),
-      el.dataset.name, el.dataset.cc,
-      el.querySelector('.audio-only-cb')?.checked
+      el.dataset.name, el.dataset.cc
     ));
   });
 }

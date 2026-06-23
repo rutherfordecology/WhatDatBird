@@ -211,6 +211,7 @@ function setTiers(birds) {
   CFG.hardBirds     = hard;
   CFG.completeBirds = complete;
   CFG.rarityBirds   = rarity;
+  CFG.allBirds      = [...birds].sort((a,b) => (b.count||0) - (a.count||0));
 }
 
 function computeTiers(allBirds) {

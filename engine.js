@@ -626,14 +626,67 @@ let state = {
   selected:null, options:[], imgUrl:null, imgLoading:false,
   photoUrls:[], photoIdx:0,
   audioPlaying:false, audioLoading:false, audioRec:null,
+  audioByMode:{easy:false,hard:false,complete:false,rarity:false},
+  audioPools:{}, audioChecking:{}, audioInsufficient:{},
 };
 function setState(p) { Object.assign(state,p); render(); }
 
+function isAudioMode(mode = state.mode) { return !!state.audioByMode[mode]; }
+
 function getPool() {
+  if (isAudioMode() && state.audioPools[state.mode]) return state.audioPools[state.mode];
   if (state.mode==='rarity')   return CFG.rarityBirds || CFG.easyBirds;
   if (state.mode==='complete') return CFG.completeBirds || CFG.hardBirds || CFG.easyBirds;
   if (state.mode==='hard')     return CFG.hardBirds || CFG.easyBirds;
   return CFG.easyBirds;
+}
+
+// ── Audio-only pool building ─────────────────────────────────────────────
+// Each mode's audio pool is checked against Xeno-canto coverage independently —
+// a separate leaderboard per mode×audio combination relies on this.
+const AUDIO_TARGET = 25, AUDIO_FLOOR = 8;
+async function checkAudio(bird) { return !!(await fetchXenoCanto(bird.latin || bird.name)); }
+
+async function buildAudioPool(mode) {
+  const tierList = mode==='easy' ? CFG.easyBirds
+                  : mode==='hard' ? CFG.hardBirds
+                  : mode==='complete' ? CFG.completeBirds
+                  : CFG.rarityBirds;
+  if (!tierList) return null;
+  const target = mode === 'easy' ? AUDIO_TARGET : tierList.length;
+  const result = [];
+  for (const b of tierList) {
+    if (result.length >= target) break;
+    if (await checkAudio(b)) result.push(b);
+  }
+  // "Common" birds without a recording get backfilled from further down the full
+  // ranked species list, so a thin top-25 doesn't tank the audio quiz size. Other
+  // modes aren't backfilled — pulling commoner birds into "Rarity"/"Complete" would
+  // defeat the point of those modes.
+  if (mode === 'easy' && result.length < target && CFG.allBirds) {
+    const already = new Set(tierList.map(b => b.latin || b.name));
+    for (const b of CFG.allBirds) {
+      if (result.length >= target) break;
+      const id = b.latin || b.name;
+      if (already.has(id)) continue;
+      already.add(id);
+      if (await checkAudio(b)) result.push(b);
+    }
+  }
+  return result.length >= AUDIO_FLOOR ? result : null;
+}
+
+async function toggleAudioMode(mode, checked) {
+  state.audioByMode[mode] = checked;
+  if (!checked || state.audioPools[mode] !== undefined) { render(); return; }
+  state.audioChecking[mode] = true;
+  render();
+  const pool = await buildAudioPool(mode);
+  state.audioPools[mode] = pool; // null = not enough audio coverage
+  state.audioChecking[mode] = false;
+  if (pool === null) { state.audioByMode[mode] = false; state.audioInsufficient[mode] = true; }
+  else delete state.audioInsufficient[mode];
+  render();
 }
 
 // ── Celebrations ──────────────────────────────────────────────────────────
@@ -792,6 +845,24 @@ async function toggleIntroLeaderboard() {
   }
 }
 
+function audioToggleHtml(modeKey) {
+  const checking = !!state.audioChecking[modeKey];
+  const checked  = !!state.audioByMode[modeKey];
+  const warn = state.audioInsufficient[modeKey]
+    ? `<div style="font-size:0.62rem;color:#8a2c2c;margin-top:2px;">Not enough recordings</div>` : '';
+  return `<label class="mode-audio-toggle${checking?' checking':''}" onclick="event.stopPropagation()">
+      <input type="checkbox" ${checked?'checked':''} ${checking?'disabled':''} onchange="toggleAudioMode('${modeKey}',this.checked)">
+      &#128266; ${checking?'Checking…':'Audio only'}
+    </label>${warn}`;
+}
+
+function modeCountHtml(modeKey, tierList, fallbackText) {
+  if (!tierList) return fallbackText;
+  const pool = state.audioPools[modeKey];
+  if (isAudioMode(modeKey) && Array.isArray(pool)) return `${pool.length} SPECIES &#128266;`;
+  return `${tierList.length} SPECIES`;
+}
+
 function renderIntro(app, header) {
   const easy     = CFG.easyBirds;
   const hard     = CFG.hardBirds;
@@ -801,31 +872,38 @@ function renderIntro(app, header) {
   const hasComplete = complete && complete.length > (hard||easy).length;
   const hasRarity   = rarity && rarity.length >= 8;
 
+  // Mode tiles are divs, not buttons — a <button> can't legally contain interactive
+  // content like the audio checkbox/<label>, and browsers silently drop or mangle
+  // such nested controls (inconsistently across multiple buttons on the same page).
   const modeGrid = `<div class="mode-grid">
-    <button class="mode-btn ${state.mode==='easy'?'active':''}" onclick="setMode('easy')">
+    <div class="mode-btn ${state.mode==='easy'?'active':''}" role="button" tabindex="0" onclick="setMode('easy')" onkeydown="if(event.key==='Enter')setMode('easy')">
       <div class="mode-emoji">&#129414;</div>
-      <div class="mode-count" id="mc-easy">${easy.length} SPECIES</div>
+      <div class="mode-count" id="mc-easy">${modeCountHtml('easy', easy, easy.length+' SPECIES')}</div>
       <div class="mode-title">Common</div>
       <div class="mode-desc">The most frequently recorded birds here.</div>
-    </button>
-    <button class="mode-btn ${state.mode==='hard'?'active':''}" ${hasHard?'':'disabled'} onclick="setMode('hard')">
+      ${audioToggleHtml('easy')}
+    </div>
+    <div class="mode-btn ${state.mode==='hard'?'active':''}${hasHard?'':' disabled'}" role="button" tabindex="0" onclick="${hasHard?`setMode('hard')`:''}" onkeydown="if(event.key==='Enter'&&${hasHard})setMode('hard')">
       <div class="mode-emoji">&#128247;</div>
-      <div class="mode-count" id="mc-hard">${hasHard?hard.length+' SPECIES':'Loading...'}</div>
+      <div class="mode-count" id="mc-hard">${hasHard?modeCountHtml('hard', hard):'Loading...'}</div>
       <div class="mode-title">Birder</div>
       <div class="mode-desc">The 90% of species you're likely to encounter here.</div>
-    </button>
-    <button class="mode-btn ${state.mode==='complete'?'active':''}" ${hasComplete?'':'disabled'} onclick="setMode('complete')">
+      ${hasHard?audioToggleHtml('hard'):''}
+    </div>
+    <div class="mode-btn ${state.mode==='complete'?'active':''}${hasComplete?'':' disabled'}" role="button" tabindex="0" onclick="${hasComplete?`setMode('complete')`:''}" onkeydown="if(event.key==='Enter'&&${hasComplete})setMode('complete')">
       <div class="mode-emoji">&#128301;</div>
-      <div class="mode-count" id="mc-complete">${hasComplete?complete.length+' SPECIES':'Loading...'}</div>
+      <div class="mode-count" id="mc-complete">${hasComplete?modeCountHtml('complete', complete):'Loading...'}</div>
       <div class="mode-title">Complete</div>
       <div class="mode-desc">Everything ever recorded. Gets progressively harder.</div>
-    </button>
-    <button class="mode-btn ${state.mode==='rarity'?'active':''}" ${hasRarity?'':'disabled'} ${hasRarity?`onclick="setMode('rarity')"`:''}>
+      ${hasComplete?audioToggleHtml('complete'):''}
+    </div>
+    <div class="mode-btn ${state.mode==='rarity'?'active':''}${hasRarity?'':' disabled'}" role="button" tabindex="0" onclick="${hasRarity?`setMode('rarity')`:''}" onkeydown="if(event.key==='Enter'&&${hasRarity})setMode('rarity')">
       <div class="mode-emoji">&#128269;</div>
-      <div class="mode-count" id="mc-rarity">${hasRarity?rarity.length+' SPECIES':'Not enough species'}</div>
+      <div class="mode-count" id="mc-rarity">${hasRarity?modeCountHtml('rarity', rarity):'Not enough species'}</div>
       <div class="mode-title">Rarity</div>
       <div class="mode-desc">The least-recorded birds in this area.</div>
-    </button>
+      ${hasRarity?audioToggleHtml('rarity'):''}
+    </div>
   </div>`;
 
   const rarityNote = state.mode === 'rarity' ? `
@@ -974,7 +1052,7 @@ function renderQuiz(app) {
   }).join('');
 
   let imgContent, carousel = '';
-  if (CFG.audioOnly) {
+  if (isAudioMode()) {
     const audioLatin = bird.latin || bird.name;
     const pool = xenoCantoCache[audioLatin];
     const hasMultiple = (pool?.length || 0) > 1;
@@ -1069,7 +1147,7 @@ function renderQuiz(app) {
   const audioLatin = bird.latin || bird.name;
   const audioRecAvailable = audioLatin ? xenoCantoCache[audioLatin] : null;
   if (audioRecAvailable) {
-    if (!CFG.audioOnly) {
+    if (!isAudioMode()) {
       const icon = state.audioPlaying ? '&#9208;&#65039;' : '&#128266;';
       const hasMultiple = xenoCantoCache[audioLatin]?.length > 1;
       const nextBtn = hasMultiple ? `<button class="audio-btn" onclick="nextAudio()" title="Different recording" aria-label="Next recording" style="margin-left:4px;font-size:0.75rem;">&#8635;</button>` : '';
@@ -1091,8 +1169,8 @@ function renderQuiz(app) {
         <div class="streak-dots">${dots}</div>
         <span class="streak-label">&#128293; ${state.streak}/${STREAK_TARGET}</span>
       </div>
-      <div class="img-box${CFG.audioOnly?' img-box-audio':''}" id="imgBox" ontouchstart="_swipeX=event.touches[0].clientX" ontouchend="if(Math.abs(event.changedTouches[0].clientX-_swipeX)>40){event.changedTouches[0].clientX<_swipeX?nextPhoto():prevPhoto()}">${imgContent}${overlay}${carousel}</div>
-      <p class="question-text">${CFG.audioOnly ? '&#128266; Which bird is calling?' : '&#128269; Which bird is this?'}${audioBtnHtml}</p>
+      <div class="img-box${isAudioMode()?' img-box-audio':''}" id="imgBox" ontouchstart="_swipeX=event.touches[0].clientX" ontouchend="if(Math.abs(event.changedTouches[0].clientX-_swipeX)>40){event.changedTouches[0].clientX<_swipeX?nextPhoto():prevPhoto()}">${imgContent}${overlay}${carousel}</div>
+      <p class="question-text">${isAudioMode() ? '&#128266; Which bird is calling?' : '&#128269; Which bird is this?'}${audioBtnHtml}</p>
       ${audioCreditHtml}
       <div class="options">${optionsHtml}</div>
       ${fieldNote}
@@ -1408,8 +1486,8 @@ function startQuiz() {
   const pool=getPool();
   const queue=buildQueue(pool);
   const first=queue.shift();
-  setState({phase:'quiz',queue,wrongBin:[],current:first,streak:0,streakHistory:[],totalSeen:0,totalCorrect:0,roundsCompleted:0,selected:null,imgUrl:null,imgLoading:!CFG.audioOnly,photoUrls:[],photoIdx:0,options:getOptions(first,pool),audioPlaying:false,audioLoading:!!CFG.audioOnly,audioRec:null});
-  if (CFG.audioOnly) {
+  setState({phase:'quiz',queue,wrongBin:[],current:first,streak:0,streakHistory:[],totalSeen:0,totalCorrect:0,roundsCompleted:0,selected:null,imgUrl:null,imgLoading:!isAudioMode(),photoUrls:[],photoIdx:0,options:getOptions(first,pool),audioPlaying:false,audioLoading:!!isAudioMode(),audioRec:null});
+  if (isAudioMode()) {
     loadAudioQuestion(first);
     if (queue[0]) {
       fetchXenoCanto(queue[0].latin || queue[0].name).then(rec => {
@@ -1490,9 +1568,9 @@ function _advance() {
       queue.splice(Math.min(Math.floor(Math.random()*4)+1,queue.length),0,pick.bird);
     }
   }
-  setState({current:next,queue,wrongBin,selected:null,imgUrl:null,imgLoading:!CFG.audioOnly,photoUrls:[],photoIdx:0,options:getOptions(next,pool),audioPlaying:false,audioLoading:!!CFG.audioOnly,audioRec:null});
+  setState({current:next,queue,wrongBin,selected:null,imgUrl:null,imgLoading:!isAudioMode(),photoUrls:[],photoIdx:0,options:getOptions(next,pool),audioPlaying:false,audioLoading:!!isAudioMode(),audioRec:null});
   if (next.wikiUrl && !next.note) fetchIDNote(next.wikiUrl).catch(() => {});
-  if (CFG.audioOnly) {
+  if (isAudioMode()) {
     loadAudioQuestion(next);
   } else {
     fetchImage(next, state.mode).then(url => {
@@ -1511,7 +1589,7 @@ function _advance() {
   const prefetchBird = queue[0] || wrongBin[0]?.bird;
   if (prefetchBird) {
     if (prefetchBird.wikiUrl && !prefetchBird.note) fetchIDNote(prefetchBird.wikiUrl).catch(() => {});
-    if (CFG.audioOnly) {
+    if (isAudioMode()) {
       // Download the next bird's audio (and build its spectrogram) while the current one
       // is still playing, so there's no fetch-and-wait delay when the user advances.
       fetchXenoCanto(prefetchBird.latin || prefetchBird.name).then(rec => {
@@ -1548,12 +1626,14 @@ async function loadLeaderboard(scrollTo = false) {
     ];
     let html = '';
     for (const { key, label } of MODES) {
+      const suffix = isAudioMode(key) ? '_audio' : '';
       const lbKey = CFG.placeId
-        ? `${CFG.placeId}_${key}`
-        : `coord_${CFG.coordLat.toFixed(3)}_${CFG.coordLng.toFixed(3)}_${key}`;
+        ? `${CFG.placeId}_${key}${suffix}`
+        : `coord_${CFG.coordLat.toFixed(3)}_${CFG.coordLng.toFixed(3)}_${key}${suffix}`;
       const entries = (data.boards?.[lbKey] || []).slice(0, 10);
       if (!entries.length) continue;
-      html += `<div style="margin-bottom:14px"><div class="lb-title" style="margin-bottom:6px">&#127942; ${label}</div>` +
+      const boardLabel = suffix ? `${label} &#128266;` : label;
+      html += `<div style="margin-bottom:14px"><div class="lb-title" style="margin-bottom:6px">&#127942; ${boardLabel}</div>` +
         entries.map((e, i) => `<div class="lb-row-item">
           <span class="lb-rank">${i + 1}</span>
           <span class="lb-name">${e.name}</span>
@@ -1579,7 +1659,8 @@ async function submitScore() {
     if (!data.boards)     data.boards     = {};
     if (!data.plays)      data.plays      = {};
     if (!data.play_dates) data.play_dates = {};
-    const key = CFG.placeId ? `${CFG.placeId}_${state.mode}` : `coord_${CFG.coordLat.toFixed(3)}_${CFG.coordLng.toFixed(3)}_${state.mode}`;
+    const audioSuffix = isAudioMode() ? '_audio' : '';
+    const key = CFG.placeId ? `${CFG.placeId}_${state.mode}${audioSuffix}` : `coord_${CFG.coordLat.toFixed(3)}_${CFG.coordLng.toFixed(3)}_${state.mode}${audioSuffix}`;
     if (!data.boards[key]) data.boards[key] = [];
     data.plays[key] = (data.plays[key] || 0) + 1;
     const today = new Date().toISOString().split('T')[0];
@@ -1615,7 +1696,7 @@ async function saveToLibrary() {
   const msg = document.getElementById('saveLibMsg');
   if (!CFG.placeId && !CFG.coordLat) return;
   const quizLabel = CFG.placeName;
-  const libraryLabel = CFG.audioOnly ? `${quizLabel} (Audio)` : quizLabel;
+  const libraryLabel = isAudioMode() ? `${quizLabel} (Audio)` : quizLabel;
   const saveBtn = document.getElementById('saveLibBtn');
   if (saveBtn) saveBtn.disabled = true;
   msg.style.color = '#2a7a58';
@@ -1713,7 +1794,7 @@ async function saveToLibrary() {
     description: libraryLabel,
     species:     null,
     type:        'dynamic',
-    url:         `quiz.html?place_id=${CFG.placeId}&place_name=${encodeURIComponent(quizLabel)}${CFG.audioOnly ? '&mode=audio' : ''}`,
+    url:         `quiz.html?place_id=${CFG.placeId}&place_name=${encodeURIComponent(quizLabel)}${isAudioMode() ? '&mode=audio' : ''}`,
     place_id:    Number(CFG.placeId),
     photo_taxon: photoTaxon,
     lat,
@@ -1726,7 +1807,7 @@ async function saveToLibrary() {
     description: libraryLabel,
     species:     null,
     type:        'dynamic',
-    url:         `quiz.html?lat=${CFG.coordLat}&lng=${CFG.coordLng}&place_name=${encodeURIComponent(quizLabel)}${CFG.coordCC ? '&country_code='+CFG.coordCC : ''}${CFG.audioOnly ? '&mode=audio' : ''}`,
+    url:         `quiz.html?lat=${CFG.coordLat}&lng=${CFG.coordLng}&place_name=${encodeURIComponent(quizLabel)}${CFG.coordCC ? '&country_code='+CFG.coordCC : ''}${isAudioMode() ? '&mode=audio' : ''}`,
     coord_lat:   CFG.coordLat,
     coord_lng:   CFG.coordLng,
     photo_taxon: photoTaxon,
@@ -1773,6 +1854,10 @@ function initEngine(config) {
 
   // Default mode to easy
   state.mode = 'easy';
+  // Legacy ?mode=audio links pre-check every mode's audio toggle; users can still untick per mode
+  state.audioByMode = {easy:!!CFG.audioOnly, hard:!!CFG.audioOnly, complete:!!CFG.audioOnly, rarity:!!CFG.audioOnly};
+  state.audioPools = {};
+  state.audioChecking = {};
 
   // Footer bar
   const footer = document.createElement('div');
