@@ -218,7 +218,8 @@ async function resolveQuizCoords(q) {
 
 async function loadLibrary() {
   try {
-    const r = await fetch(`../quizzes.json?_=${Date.now()}`);
+    const quizzesPath = (location.pathname.includes('/beta/') ? '../' : '') + 'quizzes.json';
+    const r = await fetch(`${quizzesPath}?_=${Date.now()}`);
     const d = await r.json();
     const quizzes = d.quizzes || [];
 
