@@ -53,6 +53,9 @@ body {
 .mode-btn .mode-title { font-size:0.95rem; font-weight:800; color:#1c1b18; margin-bottom:3px; }
 .mode-btn .mode-count { font-size:0.68rem; color:#2a7a58; font-weight:700; letter-spacing:0.05em; margin-bottom:5px; }
 .mode-btn .mode-desc { font-size:0.7rem; color:#6b6960; line-height:1.4; }
+.mode-audio-toggle { display:flex; align-items:center; justify-content:center; gap:4px; font-size:0.65rem; color:#5a584f; margin-top:7px; cursor:pointer; }
+.mode-audio-toggle input { cursor:pointer; }
+.mode-audio-toggle.checking { opacity:0.6; }
 
 /* Info / note boxes */
 .info-box { background:#e8f4ef; border:1.5px solid #6dba9a; border-radius:12px; padding:16px 18px; margin-bottom:16px; }
