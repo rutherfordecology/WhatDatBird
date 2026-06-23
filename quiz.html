@@ -314,9 +314,9 @@ async function loadFromGBIF() {
           const hBtn = allModeBtns.find(b => b.textContent.includes('Birder'));
           const cBtn = allModeBtns.find(b => b.textContent.includes('Complete'));
           const rBtn = allModeBtns.find(b => b.textContent.includes('Rarity'));
-          if (hBtn && hasHard) { hBtn.disabled = false; hBtn.onclick = () => setMode('hard'); }
-          if (cBtn && hasComplete) { cBtn.disabled = false; cBtn.onclick = () => setMode('complete'); }
-          if (rBtn && hasRarity) { rBtn.disabled = false; rBtn.onclick = () => setMode('rarity'); }
+          if (hBtn && hasHard) { hBtn.classList.remove('disabled'); hBtn.onclick = () => setMode('hard'); }
+          if (cBtn && hasComplete) { cBtn.classList.remove('disabled'); cBtn.onclick = () => setMode('complete'); }
+          if (rBtn && hasRarity) { rBtn.classList.remove('disabled'); rBtn.onclick = () => setMode('rarity'); }
         }
       }
     }
