@@ -872,35 +872,38 @@ function renderIntro(app, header) {
   const hasComplete = complete && complete.length > (hard||easy).length;
   const hasRarity   = rarity && rarity.length >= 8;
 
+  // Mode tiles are divs, not buttons — a <button> can't legally contain interactive
+  // content like the audio checkbox/<label>, and browsers silently drop or mangle
+  // such nested controls (inconsistently across multiple buttons on the same page).
   const modeGrid = `<div class="mode-grid">
-    <button class="mode-btn ${state.mode==='easy'?'active':''}" onclick="setMode('easy')">
+    <div class="mode-btn ${state.mode==='easy'?'active':''}" role="button" tabindex="0" onclick="setMode('easy')" onkeydown="if(event.key==='Enter')setMode('easy')">
       <div class="mode-emoji">&#129414;</div>
       <div class="mode-count" id="mc-easy">${modeCountHtml('easy', easy, easy.length+' SPECIES')}</div>
       <div class="mode-title">Common</div>
       <div class="mode-desc">The most frequently recorded birds here.</div>
       ${audioToggleHtml('easy')}
-    </button>
-    <button class="mode-btn ${state.mode==='hard'?'active':''}" ${hasHard?'':'disabled'} onclick="setMode('hard')">
+    </div>
+    <div class="mode-btn ${state.mode==='hard'?'active':''}${hasHard?'':' disabled'}" role="button" tabindex="0" onclick="${hasHard?`setMode('hard')`:''}" onkeydown="if(event.key==='Enter'&&${hasHard})setMode('hard')">
       <div class="mode-emoji">&#128247;</div>
       <div class="mode-count" id="mc-hard">${hasHard?modeCountHtml('hard', hard):'Loading...'}</div>
       <div class="mode-title">Birder</div>
       <div class="mode-desc">The 90% of species you're likely to encounter here.</div>
       ${hasHard?audioToggleHtml('hard'):''}
-    </button>
-    <button class="mode-btn ${state.mode==='complete'?'active':''}" ${hasComplete?'':'disabled'} onclick="setMode('complete')">
+    </div>
+    <div class="mode-btn ${state.mode==='complete'?'active':''}${hasComplete?'':' disabled'}" role="button" tabindex="0" onclick="${hasComplete?`setMode('complete')`:''}" onkeydown="if(event.key==='Enter'&&${hasComplete})setMode('complete')">
       <div class="mode-emoji">&#128301;</div>
       <div class="mode-count" id="mc-complete">${hasComplete?modeCountHtml('complete', complete):'Loading...'}</div>
       <div class="mode-title">Complete</div>
       <div class="mode-desc">Everything ever recorded. Gets progressively harder.</div>
       ${hasComplete?audioToggleHtml('complete'):''}
-    </button>
-    <button class="mode-btn ${state.mode==='rarity'?'active':''}" ${hasRarity?'':'disabled'} ${hasRarity?`onclick="setMode('rarity')"`:''}>
+    </div>
+    <div class="mode-btn ${state.mode==='rarity'?'active':''}${hasRarity?'':' disabled'}" role="button" tabindex="0" onclick="${hasRarity?`setMode('rarity')`:''}" onkeydown="if(event.key==='Enter'&&${hasRarity})setMode('rarity')">
       <div class="mode-emoji">&#128269;</div>
       <div class="mode-count" id="mc-rarity">${hasRarity?modeCountHtml('rarity', rarity):'Not enough species'}</div>
       <div class="mode-title">Rarity</div>
       <div class="mode-desc">The least-recorded birds in this area.</div>
       ${hasRarity?audioToggleHtml('rarity'):''}
-    </button>
+    </div>
   </div>`;
 
   const rarityNote = state.mode === 'rarity' ? `
