@@ -1252,10 +1252,11 @@ async function toggleSpDetail(id, btn) {
   const taxaPhoto = decodeURIComponent(btn.dataset.photo || '');
   panel.innerHTML = `<div class="sp-id-loading">Loading...</div>`;
 
-  // Fetch observation photos and ID note in parallel; taxa photo is already available
+  // Fetch observation photos, ID note, and a call recording in parallel; taxa photo is already available
   const [obsPhotos, noteText] = await Promise.all([
     fetchInatPhotosByTaxon(inatId, latin),
     wikiUrl ? fetchIDNote(wikiUrl) : Promise.resolve(null),
+    fetchXenoCanto(latin),
   ]);
 
   // Taxa photo always first, then unique observation photos
@@ -1280,14 +1281,25 @@ async function toggleSpDetail(id, btn) {
     ? `<div class="sp-id-label">&#128269; How to identify</div><p class="sp-id-text">${noteText}</p>`
     : `<div class="sp-id-label">&#128269; How to identify</div><p class="sp-id-loading">No identification notes available.</p>`;
 
-  panel.innerHTML = carouselHtml + noteHtml;
+  const xcRec = xenoCantoCache[latin]?.[0];
+  const audioHtml = xcRec
+    ? `<div class="sp-audio-block">
+        <div class="sp-id-label">&#128266; Bird call</div>
+        <audio controls preload="none" src="${xcRec.file}"></audio>
+        <div class="sp-audio-credit">Recording: ${xcRec.recordist} &middot; <a href="${xcRec.url}" target="_blank">Xeno-canto</a></div>
+      </div>`
+    : '';
+
+  panel.innerHTML = carouselHtml + audioHtml + noteHtml;
 }
 
 // Fetch up to 5 iNat photos — by taxon_id if available, otherwise by latin name
 async function fetchInatPhotosByTaxon(inatId, latin) {
   try {
     const param = inatId ? `taxon_id=${inatId}` : `taxon_name=${encodeURIComponent(latin)}`;
-    const r = await fetch(`https://api.inaturalist.org/v1/observations?${param}&quality_grade=research&order_by=votes&per_page=10`);
+    // iconic_taxa=Aves guards against a loose taxon_name match pulling in a wrong species
+    // (e.g. a frog photo) when there's no resolved iNat taxon ID to filter by exactly.
+    const r = await fetch(`https://api.inaturalist.org/v1/observations?${param}&iconic_taxa=Aves&quality_grade=research&order_by=votes&per_page=10`);
     if (!r.ok) return [];
     const d = await r.json();
     const urls = [];
