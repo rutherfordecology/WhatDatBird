@@ -39,7 +39,7 @@ Any mode can be toggled to **audio-only**, where you listen to a Xeno-canto reco
 | `sw.js` / `manifest.json` | PWA support — installable, offline fallback page |
 | `beta/` | Mirrors the root files; used to test changes before they're promoted to production. **Served from the same `main` branch** — GitHub Pages serves the whole repo, so `beta/` is live at `/beta/` immediately. |
 
-A `beta` branch also exists and is kept in sync on push, but it's not what GitHub Pages deploys from — production is `main`.
+There's only one `beta` — the `beta/` folder. There used to also be a `beta` git branch kept in sync on every push, but it was a stale leftover from before the `beta/` folder convention existed and added no value, so it's been removed.
 
 ### Data sources
 
@@ -63,7 +63,6 @@ Stored in `leaderboard.json`, keyed by `placeId_mode` (or `coord_lat_lng_mode` f
   ```
   git fetch origin && git rebase origin/main
   git push origin main
-  git push origin main:beta
   ```
 
 ## PWA
