@@ -539,6 +539,21 @@
       "lat": -13.89758,
       "lng": -171.78061,
       "added": "2026-06-22"
+    },
+    {
+      "name": "WhatDatBird? - Guaraú Birds",
+      "continent": "South America",
+      "country": "Brazil",
+      "description": "Guaraú Birds",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-24.36492&lng=-47.01067&place_name=Guara%C3%BA%20Birds&country_code=BR",
+      "coord_lat": -24.36492,
+      "coord_lng": -47.01067,
+      "photo_taxon": "Larus dominicanus",
+      "lat": -24.36492,
+      "lng": -47.01067,
+      "added": "2026-06-25"
     }
   ]
 }
