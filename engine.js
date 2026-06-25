@@ -627,7 +627,7 @@ let state = {
   photoUrls:[], photoIdx:0,
   audioPlaying:false, audioLoading:false, audioRec:null,
   audioByMode:{easy:false,hard:false,complete:false,rarity:false},
-  audioPools:{}, audioChecking:{}, audioInsufficient:{},
+  audioPools:{}, audioChecking:{}, audioInsufficient:{}, preparedQueues:{},
 };
 function setState(p) { Object.assign(state,p); render(); }
 
@@ -647,6 +647,20 @@ function getPool() {
 const AUDIO_TARGET = 25, AUDIO_FLOOR = 8;
 async function checkAudio(bird) { return !!(await fetchXenoCanto(bird.latin || bird.name)); }
 
+const AUDIO_CHECK_CONCURRENCY = 8;
+// Checks birds in concurrent batches (instead of one fetch at a time) so the
+// "Checking…" spinner resolves in seconds rather than tens of seconds, while
+// still stopping early once `target` hits are found.
+async function checkBirdsForAudio(birds, target, result, seen) {
+  for (let i = 0; i < birds.length && result.length < target; i += AUDIO_CHECK_CONCURRENCY) {
+    const batch = birds.slice(i, i + AUDIO_CHECK_CONCURRENCY);
+    const hits = await Promise.all(batch.map(async b => (await checkAudio(b)) ? b : null));
+    for (const b of hits) {
+      if (b && result.length < target) result.push(b);
+    }
+  }
+}
+
 async function buildAudioPool(mode) {
   const tierList = mode==='easy' ? CFG.easyBirds
                   : mode==='hard' ? CFG.hardBirds
@@ -655,23 +669,20 @@ async function buildAudioPool(mode) {
   if (!tierList) return null;
   const target = mode === 'easy' ? AUDIO_TARGET : tierList.length;
   const result = [];
-  for (const b of tierList) {
-    if (result.length >= target) break;
-    if (await checkAudio(b)) result.push(b);
-  }
+  await checkBirdsForAudio(tierList, target, result);
   // "Common" birds without a recording get backfilled from further down the full
   // ranked species list, so a thin top-25 doesn't tank the audio quiz size. Other
   // modes aren't backfilled — pulling commoner birds into "Rarity"/"Complete" would
   // defeat the point of those modes.
   if (mode === 'easy' && result.length < target && CFG.allBirds) {
     const already = new Set(tierList.map(b => b.latin || b.name));
-    for (const b of CFG.allBirds) {
-      if (result.length >= target) break;
+    const candidates = CFG.allBirds.filter(b => {
       const id = b.latin || b.name;
-      if (already.has(id)) continue;
+      if (already.has(id)) return false;
       already.add(id);
-      if (await checkAudio(b)) result.push(b);
-    }
+      return true;
+    });
+    await checkBirdsForAudio(candidates, target, result);
   }
   return result.length >= AUDIO_FLOOR ? result : null;
 }
@@ -685,8 +696,23 @@ async function toggleAudioMode(mode, checked) {
   state.audioPools[mode] = pool; // null = not enough audio coverage
   state.audioChecking[mode] = false;
   if (pool === null) { state.audioByMode[mode] = false; state.audioInsufficient[mode] = true; }
-  else delete state.audioInsufficient[mode];
+  else { delete state.audioInsufficient[mode]; prewarmFirstAudioQuestion(mode, pool); }
   render();
+}
+
+// Pre-builds the quiz queue for this mode and starts downloading the first bird's
+// recording (and spectrogram) right away, while the player is still looking at the
+// intro screen, so the audio is already buffered by the time they hit "Let's Go".
+function prewarmFirstAudioQuestion(mode, pool) {
+  const queue = buildQueueForMode(mode, pool);
+  state.preparedQueues[mode] = { pool, queue };
+  const first = queue[0];
+  if (!first) return;
+  fetchXenoCanto(first.latin || first.name).then(rec => {
+    if (!rec) return;
+    loadAudioResource(rec.file).catch(() => {});
+    ensureSpectrogram(rec.file, first);
+  }).catch(() => {});
 }
 
 // ── Celebrations ──────────────────────────────────────────────────────────
@@ -1482,8 +1508,9 @@ async function logNoPhoto(bird) {
   } catch {}
 }
 
-function buildQueue(pool) {
-  if (state.mode !== 'complete') return shuffle([...pool]);
+function buildQueue(pool) { return buildQueueForMode(state.mode, pool); }
+function buildQueueForMode(mode, pool) {
+  if (mode !== 'complete') return shuffle([...pool]);
   // Sort by obs count desc, then shuffle within each chunk of 10
   const sorted = [...pool].sort((a,b) => (b.count||0)-(a.count||0));
   const queue = [];
@@ -1495,7 +1522,9 @@ function buildQueue(pool) {
 
 function startQuiz() {
   const pool=getPool();
-  const queue=buildQueue(pool);
+  const prepared = state.preparedQueues[state.mode];
+  const queue = (prepared && prepared.pool === pool) ? prepared.queue : buildQueue(pool);
+  delete state.preparedQueues[state.mode];
   const first=queue.shift();
   setState({phase:'quiz',queue,wrongBin:[],current:first,streak:0,streakHistory:[],totalSeen:0,totalCorrect:0,roundsCompleted:0,selected:null,imgUrl:null,imgLoading:!isAudioMode(),photoUrls:[],photoIdx:0,options:getOptions(first,pool),audioPlaying:false,audioLoading:!!isAudioMode(),audioRec:null});
   if (isAudioMode()) {
@@ -1869,6 +1898,7 @@ function initEngine(config) {
   state.audioByMode = {easy:!!CFG.audioOnly, hard:!!CFG.audioOnly, complete:!!CFG.audioOnly, rarity:!!CFG.audioOnly};
   state.audioPools = {};
   state.audioChecking = {};
+  state.preparedQueues = {};
 
   // Footer bar
   const footer = document.createElement('div');
