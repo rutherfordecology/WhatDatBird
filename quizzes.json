@@ -554,6 +554,20 @@
       "lat": -24.36492,
       "lng": -47.01067,
       "added": "2026-06-25"
+    },
+    {
+      "name": "WhatDatBird? - Peruíbe, SP, BR",
+      "continent": "Other",
+      "country": "Peruíbe, SP, BR",
+      "description": "Peruíbe, SP, BR",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?place_id=25172&place_name=Peru%C3%ADbe%2C%20SP%2C%20BR",
+      "place_id": 25172,
+      "photo_taxon": null,
+      "lat": -24.3464196501,
+      "lng": -46.9242548901,
+      "added": "2026-06-25"
     }
   ]
 }
