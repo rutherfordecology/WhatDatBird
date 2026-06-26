@@ -34,6 +34,12 @@ const COORD_CC   = params.get('country_code') || null;
 const COORD_MODE = !PLACE_ID && COORD_LAT !== null && COORD_LNG !== null;
 const AUDIO_ONLY  = params.get('mode') === 'audio';
 
+// COL XR (Catalogue of Life Extended Release) — GBIF's modern taxonomy checklist.
+// 'V2' is COL XR's own code for the Aves class (bare /v1/species/{key} only accepts
+// numeric keys, so alphanumeric COL XR codes are resolved via v2/species/match instead).
+const COL_XR_CHECKLIST_KEY = '7ddf754f-d193-4cc9-b351-99906754a03b';
+const COL_XR_AVES_TAXON_ID = 'V2';
+
 const BBOX_SW_LAT = params.get('swlat') ? parseFloat(params.get('swlat')) : null;
 const BBOX_NE_LAT = params.get('nelat') ? parseFloat(params.get('nelat')) : null;
 const BBOX_SW_LNG = params.get('swlng') ? parseFloat(params.get('swlng')) : null;
@@ -141,39 +147,34 @@ async function fetchPlaceMeta(placeId) {
 async function processBatch(speciesItems) {
   return (await Promise.all(speciesItems.map(async ({key, count}) => {
     try {
-      // 1. GBIF species: Latin name + real taxonomy keys
-      let gr = await fetch(`https://api.gbif.org/v1/species/${key}`);
-      let gd = await gr.json();
-      // Follow synonym → accepted taxon (e.g. Hen Harrier → Northern Harrier for NA records)
-      if (gd.taxonomicStatus === 'SYNONYM' && gd.acceptedKey && gd.acceptedKey !== key) {
-        gr = await fetch(`https://api.gbif.org/v1/species/${gd.acceptedKey}`);
-        gd = await gr.json();
-      }
-      if (gd.rank !== 'SPECIES' || gd.class !== 'Aves') return null;
-      const latin = gd.canonicalName;
+      // 1. COL XR taxon resolution: `key` is the alphanumeric COL XR taxonID returned
+      // by the facet. v2/species/match resolves it (and follows synonyms to the accepted
+      // taxon automatically) and returns the full ancestor classification in one call.
+      const mr = await fetch(`https://api.gbif.org/v2/species/match?checklistKey=${COL_XR_CHECKLIST_KEY}&usageKey=${key}`);
+      const md = await mr.json();
+      if (!md.usage) return null;
+      const classification = md.classification || [];
+      const classEntry  = classification.find(c => c.rank === 'CLASS');
+      const orderEntry  = classification.find(c => c.rank === 'ORDER');
+      const familyEntry = classification.find(c => c.rank === 'FAMILY');
+      const genusEntry  = classification.find(c => c.rank === 'GENUS');
+      const speciesEntry = classification.find(c => c.rank === 'SPECIES');
+      if (!speciesEntry || !classEntry || classEntry.name !== 'Aves') return null;
+      const latin = speciesEntry.name;
       if (!latin) return null;
       if (BLOCKLIST.has(latin)) return null; // skip blocklisted species
       if (placeNames?.blocklist?.includes(latin)) return null;
 
-      // 2. iNat: fetch when GBIF lacks a vernacular name, or when names may differ due to taxonomy revisions
-      const inat = (!gd.vernacularName) ? await fetch(
+      // 2. iNat: COL XR's own vernacular names are unreliable (e.g. truncated abbreviations),
+      // so the common name always comes from iNat — only an exact Latin-name match is trusted.
+      const inat = await fetch(
         `https://api.inaturalist.org/v1/taxa?q=${encodeURIComponent(latin)}&rank=species&per_page=5`
       ).then(r => r.json()).then(d => {
-        const t = d.results?.find(r => r.name.toLowerCase() === latin.toLowerCase()) || d.results?.[0];
-        if (!t) return null;
-        if (t.name.toLowerCase() === latin.toLowerCase()) return t;
-        // Epithet match is only accepted if common names also share a word (guards against e.g. multiple novaeseelandiae species)
-        const epithet = latin.split(' ')[1]?.toLowerCase();
-        const tEpithet = t.name.split(' ')[1]?.toLowerCase();
-        if (epithet && epithet === tEpithet && gd.vernacularName && t.preferred_common_name) {
-          const aWords = new Set(gd.vernacularName.toLowerCase().split(/\s+/));
-          const bWords = t.preferred_common_name.toLowerCase().split(/\s+/);
-          if (bWords.some(w => aWords.has(w))) return t;
-        }
-        return null;
-      }).catch(() => null) : null;
+        const t = d.results?.find(r => r.name.toLowerCase() === latin.toLowerCase());
+        return t || null;
+      }).catch(() => null);
 
-      let name = gd.vernacularName || inat?.preferred_common_name || null;
+      let name = inat?.preferred_common_name || null;
       if (!name) return null; // skip species with no usable common name
       // Geographic name overrides for lumped taxa with different names by region
       const NA_COUNTRIES = new Set(['US','CA','MX','GT','BZ','HN','SV','NI','CR','PA']);
@@ -183,9 +184,9 @@ async function processBatch(speciesItems) {
         name,
         latin,
         gbifKey:      key,
-        ancestorIds:  [gd.classKey, gd.orderKey, gd.familyKey, gd.genusKey].filter(Boolean),
-        family:       gd.family  || '',
-        order:        gd.order   || '',
+        ancestorIds:  [classEntry?.key, orderEntry?.key, familyEntry?.key, genusEntry?.key].filter(Boolean),
+        family:       familyEntry?.name || '',
+        order:        orderEntry?.name  || '',
         count,
         wikiUrl:      inat?.wikipedia_url || `https://en.wikipedia.org/wiki/${latin.replace(/ /g,'_')}`,
         inatId:       inat?.id || null,
@@ -237,29 +238,30 @@ function updateLoadingProgress(text) {
 
 // ── GBIF-first loading ─────────────────────────────────────────────────────
 function bboxUrl(b, pad) {
-  return `https://api.gbif.org/v1/occurrence/search?decimalLatitude=${(b.minLat-pad).toFixed(4)},${(b.maxLat+pad).toFixed(4)}&decimalLongitude=${(b.minLng-pad).toFixed(4)},${(b.maxLng+pad).toFixed(4)}&taxonKey=212&facet=speciesKey&facetMincount=1&facetLimit=500&limit=0&year=${YEAR_RANGE}`;
+  return `https://api.gbif.org/v1/occurrence/search?decimalLatitude=${(b.minLat-pad).toFixed(4)},${(b.maxLat+pad).toFixed(4)}&decimalLongitude=${(b.minLng-pad).toFixed(4)},${(b.maxLng+pad).toFixed(4)}&taxonKey=${COL_XR_AVES_TAXON_ID}&checklistKey=${COL_XR_CHECKLIST_KEY}&facet=speciesKey&facetMincount=1&facetLimit=500&limit=0&year=${YEAR_RANGE}`;
 }
 function countryUrl() {
-  return `https://api.gbif.org/v1/occurrence/search?country=${COUNTRY_CODE}&taxonKey=212&facet=speciesKey&facetMincount=1&facetLimit=1000&limit=0&year=${YEAR_RANGE}`;
+  return `https://api.gbif.org/v1/occurrence/search?country=${COUNTRY_CODE}&taxonKey=${COL_XR_AVES_TAXON_ID}&checklistKey=${COL_XR_CHECKLIST_KEY}&facet=speciesKey&facetMincount=1&facetLimit=1000&limit=0&year=${YEAR_RANGE}`;
 }
 
 async function getGBIFSpeciesKeys() {
+  // Facet "name" is now COL XR's alphanumeric taxonID (e.g. "7CYVX"), not a numeric key.
   if (IS_COUNTRY && COUNTRY_CODE) {
     const r = await fetch(countryUrl());
     const d = await r.json();
-    return (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
+    return (d.facets?.[0]?.counts || []).map(c => ({ key: c.name, count: parseInt(c.count) }));
   }
   if (PLACE_BBOX) {
     // Coord mode: no extra padding; normal mode: 0.2 deg buffer around iNat boundary
     const extraPad = (COORD_MODE || BBOX_MODE) ? 0 : 0.2;
     const r = await fetch(bboxUrl(PLACE_BBOX, extraPad));
     const d = await r.json();
-    return (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
+    return (d.facets?.[0]?.counts || []).map(c => ({ key: c.name, count: parseInt(c.count) }));
   }
   if (COUNTRY_CODE) {
     const r = await fetch(countryUrl());
     const d = await r.json();
-    return (d.facets?.[0]?.counts || []).map(c => ({ key: parseInt(c.name), count: parseInt(c.count) }));
+    return (d.facets?.[0]?.counts || []).map(c => ({ key: c.name, count: parseInt(c.count) }));
   }
   throw new Error('No geographic data available for GBIF query');
 }
