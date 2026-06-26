@@ -568,6 +568,21 @@
       "lat": -24.3464196501,
       "lng": -46.9242548901,
       "added": "2026-06-25"
+    },
+    {
+      "name": "WhatDatBird? - Birds near Charlotte County",
+      "continent": "North America",
+      "country": "United States",
+      "description": "Birds near Charlotte County",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=26.8968&lng=-81.94204&place_name=Birds%20near%20Charlotte%20County&country_code=US",
+      "coord_lat": 26.8968,
+      "coord_lng": -81.94204,
+      "photo_taxon": "Egretta caerulea",
+      "lat": 26.8968,
+      "lng": -81.94204,
+      "added": "2026-06-26"
     }
   ]
 }
