@@ -80,7 +80,7 @@
   {
     "name": "Brazilian Tanager",
     "latin": "Ramphocelus bresilia",
-    "place": "PeruÃÂ­be, Brazil",
+    "place": "PeruÃÂÃÂ­be, Brazil",
     "date": "2026-06-25"
   },
   {
@@ -92,6 +92,12 @@
   {
     "name": "Snowy Egret",
     "latin": "Egretta thula",
+    "place": "Birds near Charlotte County",
+    "date": "2026-06-26"
+  },
+  {
+    "name": "Red-bellied Woodpecker",
+    "latin": "Melanerpes carolinus",
     "place": "Birds near Charlotte County",
     "date": "2026-06-26"
   }
