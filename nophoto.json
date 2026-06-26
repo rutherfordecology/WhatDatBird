@@ -80,7 +80,7 @@
   {
     "name": "Brazilian Tanager",
     "latin": "Ramphocelus bresilia",
-    "place": "PeruÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ­be, Brazil",
+    "place": "PeruÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ­be, Brazil",
     "date": "2026-06-25"
   },
   {
@@ -110,6 +110,12 @@
   {
     "name": "Pied-billed Grebe",
     "latin": "Podilymbus podiceps",
+    "place": "Birds near Charlotte County",
+    "date": "2026-06-26"
+  },
+  {
+    "name": "Downy Woodpecker",
+    "latin": "Dryobates pubescens",
     "place": "Birds near Charlotte County",
     "date": "2026-06-26"
   }
