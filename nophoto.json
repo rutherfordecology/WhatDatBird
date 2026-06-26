@@ -80,7 +80,13 @@
   {
     "name": "Brazilian Tanager",
     "latin": "Ramphocelus bresilia",
-    "place": "Peruíbe, Brazil",
+    "place": "PeruÃ­be, Brazil",
     "date": "2026-06-25"
+  },
+  {
+    "name": "Great Crested Flycatcher",
+    "latin": "Myiarchus crinitus",
+    "place": "Birds near Charlotte County",
+    "date": "2026-06-26"
   }
 ]
