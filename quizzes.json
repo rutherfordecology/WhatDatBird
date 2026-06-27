@@ -583,6 +583,20 @@
       "lat": 26.8968,
       "lng": -81.94204,
       "added": "2026-06-26"
+    },
+    {
+      "name": "WhatDatBird? - Hamilton County, TN, US",
+      "continent": "Other",
+      "country": "Hamilton County, TN, US",
+      "description": "Hamilton County, TN, US",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?place_id=1171&place_name=Hamilton%20County%2C%20TN%2C%20US",
+      "place_id": 1171,
+      "photo_taxon": null,
+      "lat": 35.180855282,
+      "lng": -85.1647898936,
+      "added": "2026-06-27"
     }
   ]
 }
