@@ -597,6 +597,21 @@
       "lat": 35.180855282,
       "lng": -85.1647898936,
       "added": "2026-06-27"
+    },
+    {
+      "name": "WhatDatBird? - Birds near Put-in-Bay Township",
+      "continent": "North America",
+      "country": "United States",
+      "description": "Birds near Put-in-Bay Township",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=41.64654&lng=-82.82684&place_name=Birds%20near%20Put-in-Bay%20Township&country_code=US",
+      "coord_lat": 41.64654,
+      "coord_lng": -82.82684,
+      "photo_taxon": "Haliaeetus leucocephalus",
+      "lat": 41.64654,
+      "lng": -82.82684,
+      "added": "2026-06-27"
     }
   ]
 }
