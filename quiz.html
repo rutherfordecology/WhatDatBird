@@ -344,7 +344,8 @@ async function loadFromGBIF() {
   }
 
   await fetchLocalNames(birds);
-  if (introShown) setTiers(birds);
+  CFG.dataLoadComplete = true;
+  if (introShown) { setTiers(birds); render(); }
 
   return birds;
 }
@@ -440,6 +441,7 @@ async function loadFromInat(bufferKm = 0) {
       indigenousName: indNames[item.taxon.name] || null,
     }));
   await fetchLocalNames(birds);
+  CFG.dataLoadComplete = true;
   return birds;
 }
 
