@@ -511,21 +511,6 @@
       "added": "2026-06-21"
     },
     {
-      "name": "WhatDatBird? - Sisterson Lagoon",
-      "continent": "Oceania",
-      "country": "New Zealand",
-      "description": "Sisterson Lagoon",
-      "species": null,
-      "type": "dynamic",
-      "url": "quiz.html?lat=-38.6732&lng=177.95936&place_name=Sisterson%20Lagoon&country_code=NZ",
-      "coord_lat": -38.6732,
-      "coord_lng": 177.95936,
-      "photo_taxon": "Hemiphaga novaeseelandiae",
-      "lat": -38.6732,
-      "lng": 177.95936,
-      "added": "2026-06-21"
-    },
-    {
       "name": "WhatDatBird? - Birds near Tiapapata",
       "continent": "Oceania",
       "country": "Samoa",
