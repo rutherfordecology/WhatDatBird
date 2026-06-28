@@ -278,6 +278,24 @@ function getPhotoUrls(bird, mode) {
 const wikiSummaryCache = {};
 const ID_SECTIONS = /^(description|identification|appearance|plumage|characteristics|field marks|field identification|morphology)/i;
 
+// {{convert|14|to|18|cm|abbr=on}} etc. carry the actual measurements Wikipedia ID
+// sections rely on — expand them to plain text before templates get stripped,
+// otherwise the numbers vanish along with the markup.
+function expandConvertTemplates(wikitext) {
+  return wikitext.replace(/{{\s*(?:convert|cvt)\s*\|([^{}]*)}}/gi, (m, args) => {
+    const parts = args.split('|').map(s => s.trim()).filter(p => p && !/=/.test(p));
+    if (!parts.length) return '';
+    let i = 0;
+    const nums = [];
+    while (i < parts.length && (/^-?[\d.]+$/.test(parts[i]) || /^(to|and|[-–—]|x)$/i.test(parts[i]))) {
+      nums.push(parts[i] === '-' || parts[i] === '—' ? '–' : parts[i]);
+      i++;
+    }
+    const unit = parts[i] || '';
+    return (nums.join(' ') + (unit ? ' ' + unit : '')).trim();
+  });
+}
+
 async function fetchIDNote(wikiUrl) {
   if (!wikiUrl) return null;
   if (wikiSummaryCache[wikiUrl] !== undefined) return wikiSummaryCache[wikiUrl];
@@ -301,11 +319,12 @@ async function fetchIDNote(wikiUrl) {
         const secD2 = await secR2.json();
         const wikitext = secD2.parse?.wikitext?.['*'] || '';
         // Strip wiki markup: templates, refs, links, bold/italic, headers
-        text = wikitext
-          .replace(/{{[^}]*}}/g, '')
+        text = expandConvertTemplates(wikitext)
           .replace(/<ref[^>]*>[\s\S]*?<\/ref>/gi, '')
           .replace(/<[^>]+>/g, '')
           .replace(/\[\[\s*(?:File|Image):[^\]]*\]\]/gi, '')
+          .replace(/{{[^{}]*}}/g, '')
+          .replace(/{{[^{}]*}}/g, '')
           .replace(/\[\[(?:[^|\]]*\|)?([^\]]+)\]\]/g, '$1')
           .replace(/'{2,}/g, '')
           .replace(/==+[^=]+==+/g, '')
