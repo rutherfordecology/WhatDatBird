@@ -218,8 +218,11 @@ function setTiers(birds) {
 function computeTiers(allBirds) {
   const birds = [...allBirds].sort((a,b) => (b.count||0) - (a.count||0));
   const n     = birds.length;
-  const easyCount = Math.min(25, n);
-  const hardCount = Math.max(easyCount + 1, Math.floor(n * 0.9));
+  // Common is capped at 25, but for small locations it also scales down so there's
+  // headroom left for Birder/Complete to be distinct, non-empty tiers rather than
+  // duplicates of Common (which made those tiles permanently unavailable).
+  const easyCount = Math.min(25, Math.max(5, Math.ceil(n * 0.6)));
+  const hardCount = Math.min(n, Math.max(easyCount + 1, Math.ceil(n * 0.9)));
   // Rarity: bottom 10% by count, minimum 8 species
   const rarityPool = birds.slice(Math.floor(n * 0.85)).filter(b => (b.count||0) >= 1);
   const rarity = rarityPool.length >= 8 ? rarityPool : null;
@@ -537,8 +540,13 @@ async function boot() {
     }
 
     if (foundPad !== null) {
-      // PLACE_BBOX already set to the winning pad — run full GBIF load with no extra padding
-      updateLoadingProgress(`Loading species within ${padLabel(foundPad)} of ${PLACE_NAME}...`);
+      // foundPad is the smallest box that just cleared MIN_SPECIES — that box tends to
+      // contain barely more than the threshold, leaving no room for Birder/Complete/
+      // Rarity tiers to differ from Common. Double it to pull in a richer pool while
+      // staying roughly local to the searched point.
+      const expandedPad = Math.min(foundPad * 2, 4.0);
+      PLACE_BBOX = { minLat: COORD_LAT - expandedPad, maxLat: COORD_LAT + expandedPad, minLng: COORD_LNG - expandedPad, maxLng: COORD_LNG + expandedPad };
+      updateLoadingProgress(`Loading species within ${padLabel(expandedPad)} of ${PLACE_NAME}...`);
       try {
         await loadFromGBIF();
         return;
