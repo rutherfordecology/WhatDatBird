@@ -597,6 +597,21 @@
       "lat": 41.64654,
       "lng": -82.82684,
       "added": "2026-06-27"
+    },
+    {
+      "name": "WhatDatBird? - Birds near Sisterson Lagoon",
+      "continent": "Oceania",
+      "country": "New Zealand",
+      "description": "Birds near Sisterson Lagoon",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-38.67363&lng=177.95884&place_name=Birds%20near%20Sisterson%20Lagoon&country_code=NZ",
+      "coord_lat": -38.67363,
+      "coord_lng": 177.95884,
+      "photo_taxon": "Hemiphaga novaeseelandiae",
+      "lat": -38.67363,
+      "lng": 177.95884,
+      "added": "2026-06-28"
     }
   ]
 }
