@@ -612,6 +612,21 @@
       "lat": -38.67363,
       "lng": 177.95884,
       "added": "2026-06-28"
+    },
+    {
+      "name": "WhatDatBird? - Sandy Camp, Bribane",
+      "continent": "Oceania",
+      "country": "Australia",
+      "description": "Sandy Camp, Bribane",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-27.4352&lng=153.15137&place_name=Sandy%20Camp%2C%20Bribane&country_code=AU",
+      "coord_lat": -27.4352,
+      "coord_lng": 153.15137,
+      "photo_taxon": "Alectura lathami",
+      "lat": -27.4352,
+      "lng": 153.15137,
+      "added": "2026-06-29"
     }
   ]
 }
