@@ -410,21 +410,28 @@
     ],
     "coord_-23.929_31.461_hard": [
       {
+        "name": "Liz",
+        "rounds": 7,
+        "score": 103,
+        "pts": 91,
+        "date": "2026-06-30"
+      },
+      {
+        "name": "Latina",
+        "score": 11,
+        "pts": 10,
+        "date": "2026-06-13"
+      },
+      {
         "name": "Vitalbird",
-        "score": 297,
-        "pts": 271,
+        "score": 26,
+        "pts": 24,
         "date": "2026-06-10"
       },
       {
-        "name": "Mariska",
-        "score": 114,
-        "pts": 85,
-        "date": "2026-06-09"
-      },
-      {
         "name": "Vitalbird",
-        "score": 55,
-        "pts": 46,
+        "score": 38,
+        "pts": 31,
         "date": "2026-06-10"
       },
       {
@@ -435,21 +442,21 @@
       },
       {
         "name": "Vitalbird",
-        "score": 38,
-        "pts": 31,
+        "score": 55,
+        "pts": 46,
         "date": "2026-06-10"
+      },
+      {
+        "name": "Mariska",
+        "score": 114,
+        "pts": 85,
+        "date": "2026-06-09"
       },
       {
         "name": "Vitalbird",
-        "score": 26,
-        "pts": 24,
+        "score": 297,
+        "pts": 271,
         "date": "2026-06-10"
-      },
-      {
-        "name": "Latina",
-        "score": 11,
-        "pts": 10,
-        "date": "2026-06-13"
       }
     ],
     "46704_easy": [
@@ -740,7 +747,8 @@
     "coord_-13.898_-171.781_easy_audio": 4,
     "coord_-38.674_177.959_easy": 1,
     "coord_-13.898_-171.781_complete": 1,
-    "coord_-27.435_153.151_easy": 1
+    "coord_-27.435_153.151_easy": 1,
+    "coord_-23.929_31.461_hard": 1
   },
   "play_dates": {
     "2026-06-19": 13,
@@ -753,6 +761,6 @@
     "2026-06-27": 2,
     "2026-06-28": 5,
     "2026-06-29": 1,
-    "2026-06-30": 1
+    "2026-06-30": 2
   }
 }
