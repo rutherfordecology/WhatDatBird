@@ -459,9 +459,10 @@ async function addQuizMarkers(quizzes) {
     const { q, c } = await p;
     if (!c) continue;
     const label = q.description || q.name.replace('WhatDatBird? - ', '');
-    L.marker([c.lat, c.lng])
-      .addTo(pickMap)
-      .bindPopup(`<div style="font-family:system-ui,-apple-system,sans-serif;text-align:center;min-width:130px"><strong style="color:#1a5940;display:block;margin-bottom:6px">${label}</strong><a href="${q.url}" style="color:#1a5940;font-weight:800;text-decoration:none">Play this quiz &#8594;</a></div>`);
+    const popup = `<div style="font-family:system-ui,-apple-system,sans-serif;text-align:center;min-width:130px"><strong style="color:#1a5940;display:block;margin-bottom:6px">${label}</strong><a href="${q.url}" style="color:#1a5940;font-weight:800;text-decoration:none">Play this quiz &#8594;</a></div>`;
+    for (const lngOffset of [0, -360, 360]) {
+      L.marker([c.lat, c.lng + lngOffset]).addTo(pickMap).bindPopup(popup);
+    }
   }
 }
 
