@@ -443,8 +443,6 @@ const TYPE_LABEL = {
 // dateline (NZ, Pacific islands) aren't pinned against a hard edge with no breathing room.
 pickMap = L.map('mainMap', {
   minZoom: 2,
-  maxBounds: [[-90, -270], [90, 270]],
-  maxBoundsViscosity: 1.0
 }).setView([10, 140], 2);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; <a href="https://openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -460,7 +458,7 @@ async function addQuizMarkers(quizzes) {
     if (!c) continue;
     const label = q.description || q.name.replace('WhatDatBird? - ', '');
     const popup = `<div style="font-family:system-ui,-apple-system,sans-serif;text-align:center;min-width:130px"><strong style="color:#1a5940;display:block;margin-bottom:6px">${label}</strong><a href="${q.url}" style="color:#1a5940;font-weight:800;text-decoration:none">Play this quiz &#8594;</a></div>`;
-    for (const lngOffset of [0, -360, 360]) {
+    for (const lngOffset of [-1440, -1080, -720, -360, 0, 360, 720, 1080, 1440]) {
       L.marker([c.lat, c.lng + lngOffset]).addTo(pickMap).bindPopup(popup);
     }
   }
