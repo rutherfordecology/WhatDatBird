@@ -670,7 +670,7 @@ const AUDIO_CHECK_CONCURRENCY = 8;
 // Checks birds in concurrent batches (instead of one fetch at a time) so the
 // "Checking…" spinner resolves in seconds rather than tens of seconds, while
 // still stopping early once `target` hits are found.
-async function checkBirdsForAudio(birds, target, result, seen) {
+async function checkBirdsForAudio(birds, target, result) {
   for (let i = 0; i < birds.length && result.length < target; i += AUDIO_CHECK_CONCURRENCY) {
     const batch = birds.slice(i, i + AUDIO_CHECK_CONCURRENCY);
     const hits = await Promise.all(batch.map(async b => (await checkAudio(b)) ? b : null));
@@ -741,14 +741,7 @@ function showEncouragement(text) {
   document.body.appendChild(div); setTimeout(()=>div.remove(),1300);
 }
 function burstStars(x,y) {
-  const emojis=['&#11088;','&#10024;','&#128171;','&#127775;'];
-  for(let i=0;i<8;i++) {
-    const el=document.createElement('div'); el.className='star-burst';
-    el.innerHTML=emojis[Math.floor(Math.random()*emojis.length)];
-    const angle=(i/8)*Math.PI*2, dist=60+Math.random()*60;
-    el.style.cssText=`left:${x}px;top:${y}px;--tx:${Math.cos(angle)*dist}px;--ty:${Math.sin(angle)*dist}px;animation-duration:${0.6+Math.random()*0.3}s`;
-    document.body.appendChild(el); setTimeout(()=>el.remove(),1000);
-  }
+  // Emoji star-burst removed — confetti (on win) and text encouragement remain.
 }
 function launchConfetti() {
   for(let i=0;i<60;i++) setTimeout(()=>{
@@ -760,11 +753,8 @@ function launchConfetti() {
 }
 
 function starsForScore(pct) {
-  if(pct>=95) return'&#11088;&#11088;&#11088;&#11088;&#11088;';
-  if(pct>=85) return'&#11088;&#11088;&#11088;&#11088;';
-  if(pct>=70) return'&#11088;&#11088;&#11088;';
-  if(pct>=55) return'&#11088;&#11088;';
-  return'&#11088;';
+  const n = pct>=95?5:pct>=85?4:pct>=70?3:pct>=55?2:1;
+  return icon('star',{size:24}).repeat(n);
 }
 
 function badge(label, cls) { return `<span class="badge ${cls}">${label}</span>`; }
@@ -875,7 +865,7 @@ async function toggleIntroLeaderboard() {
       const entries = data.boards?.[lbKey] || [];
       if (!entries.length) return '';
       return `<div style="margin-bottom:14px">
-        <div class="lb-title" style="margin-bottom:6px">&#127942; ${label}</div>
+        <div class="lb-title" style="margin-bottom:6px">${icon('award',{size:14})} ${label}</div>
         ${entries.map((e,i) => `<div class="lb-row-item">
           <span class="lb-rank">${i+1}</span>
           <span class="lb-name">${e.name}</span>
@@ -897,14 +887,14 @@ function audioToggleHtml(modeKey) {
     ? `<div style="font-size:0.62rem;color:#8a2c2c;margin-top:2px;">Not enough recordings</div>` : '';
   return `<label class="mode-audio-toggle${checking?' checking':''}" onclick="event.stopPropagation()">
       <input type="checkbox" ${checked?'checked':''} ${checking?'disabled':''} onchange="toggleAudioMode('${modeKey}',this.checked)">
-      &#128266; ${checking?'Checking…':'Audio only'}
+      ${icon('volume',{size:14})} ${checking?'Checking…':'Audio only'}
     </label>${warn}`;
 }
 
 function modeCountHtml(modeKey, tierList, fallbackText) {
   if (!tierList) return fallbackText;
   const pool = state.audioPools[modeKey];
-  if (isAudioMode(modeKey) && Array.isArray(pool)) return `${pool.length} SPECIES &#128266;`;
+  if (isAudioMode(modeKey) && Array.isArray(pool)) return `${pool.length} SPECIES ${icon('volume',{size:12})}`;
   return `${tierList.length} SPECIES`;
 }
 
@@ -922,28 +912,28 @@ function renderIntro(app, header) {
   // such nested controls (inconsistently across multiple buttons on the same page).
   const modeGrid = `<div class="mode-grid">
     <div class="mode-btn ${state.mode==='easy'?'active':''}" role="button" tabindex="0" onclick="setMode('easy')" onkeydown="if(event.key==='Enter')setMode('easy')">
-      <div class="mode-emoji">&#129414;</div>
+      <div class="mode-emoji">${icon('bird',{size:26})}</div>
       <div class="mode-count" id="mc-easy">${modeCountHtml('easy', easy, easy.length+' SPECIES')}</div>
       <div class="mode-title">Common</div>
       <div class="mode-desc">The most frequently recorded birds here.</div>
       ${audioToggleHtml('easy')}
     </div>
     <div class="mode-btn ${state.mode==='hard'?'active':''}${hasHard?'':' disabled'}" role="button" tabindex="0" onclick="${hasHard?`setMode('hard')`:''}" onkeydown="if(event.key==='Enter'&&${hasHard})setMode('hard')">
-      <div class="mode-emoji">&#128247;</div>
+      <div class="mode-emoji">${icon('camera',{size:26})}</div>
       <div class="mode-count" id="mc-hard">${hasHard?modeCountHtml('hard', hard):(CFG.dataLoadComplete?'Not enough species':'Loading...')}</div>
       <div class="mode-title">Birder</div>
       <div class="mode-desc">The 90% of species you're likely to encounter here.</div>
       ${hasHard?audioToggleHtml('hard'):''}
     </div>
     <div class="mode-btn ${state.mode==='complete'?'active':''}${hasComplete?'':' disabled'}" role="button" tabindex="0" onclick="${hasComplete?`setMode('complete')`:''}" onkeydown="if(event.key==='Enter'&&${hasComplete})setMode('complete')">
-      <div class="mode-emoji">&#128301;</div>
+      <div class="mode-emoji">${icon('waveform',{size:26})}</div>
       <div class="mode-count" id="mc-complete">${hasComplete?modeCountHtml('complete', complete):(CFG.dataLoadComplete?'Not enough species':'Loading...')}</div>
       <div class="mode-title">Complete</div>
       <div class="mode-desc">Everything ever recorded. Gets progressively harder.</div>
       ${hasComplete?audioToggleHtml('complete'):''}
     </div>
     <div class="mode-btn ${state.mode==='rarity'?'active':''}${hasRarity?'':' disabled'}" role="button" tabindex="0" onclick="${hasRarity?`setMode('rarity')`:''}" onkeydown="if(event.key==='Enter'&&${hasRarity})setMode('rarity')">
-      <div class="mode-emoji">&#128269;</div>
+      <div class="mode-emoji">${icon('search',{size:26})}</div>
       <div class="mode-count" id="mc-rarity">${hasRarity?modeCountHtml('rarity', rarity):'Not enough species'}</div>
       <div class="mode-title">Rarity</div>
       <div class="mode-desc">The least-recorded birds in this area.</div>
@@ -956,19 +946,19 @@ function renderIntro(app, header) {
       <p style="color:#8a2c2c;"><strong>Rarity mode:</strong> These species have very few recorded occurrences in this area. Some may be genuine rarities, but others could represent misidentifications, data entry errors, or escaped captive birds. Treat them with appropriate scepticism.</p>
     </div>` : '';
 
-  const bufferNote = state.buffer>0 ? `<p class="note-text">&#x1F4E1; Area expanded to ${state.buffer}km radius to find enough species</p>` : '';
+  const bufferNote = state.buffer>0 ? `<p class="note-text">${icon('crosshair',{size:13})} Area expanded to ${state.buffer}km radius to find enough species</p>` : '';
 
   app.innerHTML = header + modeGrid + rarityNote + `
-    <button class="btn-primary" onclick="startQuiz()">Let's Go! &#128640;</button>
+    <button class="btn-primary" onclick="startQuiz()">Let's Go!</button>
     ${bufferNote}
     <div class="info-box" style="margin-top:12px;">
-      <p>&#127919; Get your score to <strong>${STREAK_TARGET} to win!</strong> Each correct answer scores +1, wrong answers cost -2. Tricky birds keep coming back.</p>
+      <p>${icon('target',{size:15})} Get your score to <strong>${STREAK_TARGET} to win!</strong> Each correct answer scores +1, wrong answers cost -2. Tricky birds keep coming back.</p>
     </div>
-    <button class="btn-secondary" onclick="setState({phase:'species'})">&#128203; Species List</button>
-    <button class="btn-secondary" onclick="toggleIntroLeaderboard()">&#127942; Leaderboards</button>
+    <button class="btn-secondary" onclick="setState({phase:'species'})">${icon('list',{size:15})} Species List</button>
+    <button class="btn-secondary" onclick="toggleIntroLeaderboard()">${icon('award',{size:15})} Leaderboards</button>
     <div id="introLbPanel" style="display:none;margin-top:12px"></div>
     ${saveSectionHtml()}
-    <button class="btn-back" onclick="setState({phase:'about'})">&#8505; About WhatDatBird?</button>
+    <button class="btn-back" onclick="setState({phase:'about'})">${icon('info',{size:15})} About WhatDatBird?</button>
     <button class="btn-back" onclick="window.location.href='${CFG.backUrl}'">&#8592; All Quizzes</button>`;
   if ((CFG.placeId || CFG.coordLat) && _inLibrary === null) checkInLibrary();
 }
@@ -979,11 +969,11 @@ function renderCelebrate(app, header) {
   const canContinue = birdsLeft > 0;
   app.innerHTML = header + `
     <div class="fade" style="text-align:center;padding:32px 20px;">
-      <div style="font-size:3rem;margin-bottom:12px;">🎉</div>
+      <div style="margin-bottom:12px;line-height:0;color:#1a5940;">${icon('award',{size:44})}</div>
       <h2 style="font-size:1.8rem;font-weight:900;color:#1a5940;margin-bottom:8px;">10 points!</h2>
       <p style="color:#6b6960;margin-bottom:28px;">Amazing work — you nailed it!</p>
       ${canContinue ? `
-        <button class="btn-primary" onclick="keepPlaying()" style="margin-bottom:12px;">Keep going for 10 more! 🚀</button>
+        <button class="btn-primary" onclick="keepPlaying()" style="margin-bottom:12px;">Keep going for 10 more!</button>
         <br>` : ''}
       <button class="btn-secondary" onclick="setState({phase:'result', roundsCompleted: state.roundsCompleted + 1})">Save score &amp; see results</button>
     </div>`;
@@ -998,11 +988,11 @@ function renderResult(app, header) {
   const acc = state.totalSeen>0 ? Math.round((state.totalCorrect/state.totalSeen)*100) : 0;
   const stars = starsForScore(acc);
   const msg = [
-    acc>=95?'Absolutely flawless! You know these birds! &#127942;':null,
-    acc>=85?'Brilliant work! You really know your birds! &#127775;':null,
-    acc>=70?'Great job! A few tricky ones but you got there! &#127881;':null,
-    acc>=55?'Well done! Keep practising! &#128170;':null,
-    'You did it! Those wrong ones kept coming back until you nailed them! &#128038;',
+    acc>=95?'Absolutely flawless! You know these birds!':null,
+    acc>=85?'Brilliant work! You really know your birds!':null,
+    acc>=70?'Great job! A few tricky ones but you got there!':null,
+    acc>=55?'Well done! Keep practising!':null,
+    'You did it! Those wrong ones kept coming back until you nailed them!',
   ].find(m=>m!==null);
 
   const canSave = CFG.placeId || CFG.coordLat;
@@ -1010,9 +1000,9 @@ function renderResult(app, header) {
 
   const lbSection = canSave ? `
     <div class="lb-entry" id="lbEntry">
-      <div id="lbLocked" style="text-align:center;color:#9b9890;font-size:0.85rem;padding:8px 0">&#128274; Add this quiz to the library to unlock the leaderboard</div>
+      <div id="lbLocked" style="text-align:center;color:#9b9890;font-size:0.85rem;padding:8px 0">${icon('lock',{size:14})} Add this quiz to the library to unlock the leaderboard</div>
       <div id="lbUnlocked" style="display:none">
-        <div class="lb-label">&#127942; Add your score to the leaderboard</div>
+        <div class="lb-label">${icon('award',{size:14})} Add your score to the leaderboard</div>
         <div class="lb-row">
           <input class="lb-input" id="lbName" type="text" maxlength="24" placeholder="Your name" autocomplete="off">
           <button class="lb-submit" onclick="submitScore()">Submit</button>
@@ -1024,12 +1014,12 @@ function renderResult(app, header) {
 
   app.innerHTML = header + `
     <div class="result">
-      <span class="trophy">&#127942;</span>
+      <span class="trophy">${icon('award',{size:64})}</span>
       <h2>${STREAK_TARGET} points!</h2>
       <div class="star-row">${stars}</div>
       <p class="stat">${state.totalCorrect} correct from ${state.totalSeen} attempts (${acc}%)</p>
       <p class="msg">${msg}</p>
-      <button class="btn-primary" onclick="goIntro()">Play Again &#127919;</button>
+      <button class="btn-primary" onclick="goIntro()">Play Again</button>
       ${saveBtn}
       ${lbSection}
       <button class="btn-back" onclick="window.location.href='${CFG.backUrl}'">&#8592; All Quizzes</button>
@@ -1050,7 +1040,7 @@ function saveSectionHtml() {
   const show = _inLibrary === false ? '' : 'none';
   return `
     <div id="saveLibSection">
-      <button class="btn-save-library" id="saveLibBtn" onclick="saveToLibrary()" style="display:${show};">&#127757; Add to Quiz Library</button>
+      <button class="btn-save-library" id="saveLibBtn" onclick="saveToLibrary()" style="display:${show};">${icon('upload',{size:15})} Add to Quiz Library</button>
       <div id="saveLibMsg" style="font-size:0.8rem;color:#2a7a58;margin-top:8px;min-height:1.2em;text-align:center;font-weight:700;"></div>
     </div>`;
 }
@@ -1102,7 +1092,7 @@ function renderQuiz(app) {
     const pool = xenoCantoCache[audioLatin];
     const hasMultiple = (pool?.length || 0) > 1;
     if (state.audioLoading) {
-      imgContent = `<div class="img-placeholder"><div class="icon">&#128266;</div><span>Loading call...</span></div>`;
+      imgContent = `<div class="img-placeholder"><div class="icon">${icon('volume',{size:40})}</div><span>Loading call...</span></div>`;
     } else {
       const displayRec = state.audioRec || pool?.[0];
       if (displayRec?.file) ensureSpectrogram(displayRec.file, bird);
@@ -1117,14 +1107,14 @@ function renderQuiz(app) {
       imgContent = `
         ${sonoImg}
         <button class="audio-box-btn${state.audioPlaying?' playing':''}" onclick="toggleAudio()" aria-label="${state.audioPlaying?'Stop call':'Play call'}">
-          ${state.audioPlaying?'&#9208;&#65039;':'&#128266;'}
+          ${state.audioPlaying?icon('pause',{size:30}):icon('volume',{size:30})}
         </button>
-        ${hasMultiple?'<button class="carousel-btn carousel-next" onclick="nextAudio()" title="Different recording">&#8635;</button>':''}`;
+        ${hasMultiple?`<button class="carousel-btn carousel-next" onclick="nextAudio()" title="Different recording">${icon('refresh',{size:18})}</button>`:''}`;
     }
   } else {
-    if(state.imgLoading) imgContent=`<div class="img-placeholder"><div class="icon">&#128247;</div><span>Loading...</span></div>`;
+    if(state.imgLoading) imgContent=`<div class="img-placeholder"><div class="icon">${icon('camera',{size:40})}</div><span>Loading...</span></div>`;
     else if(state.imgUrl) imgContent=`<img src="${state.imgUrl}" alt="mystery bird" onerror="imgFailed()" onload="adjustImgPosition(this)"/>`;
-    else imgContent=`<div class="img-placeholder"><div class="icon">&#128247;</div><span>No photo available</span></div>`;
+    else imgContent=`<div class="img-placeholder"><div class="icon">${icon('camera',{size:40})}</div><span>No photo available</span></div>`;
 
     const multi = state.photoUrls.length>1 && !state.imgLoading;
     carousel = multi ? `
@@ -1164,7 +1154,7 @@ function renderQuiz(app) {
   if(state.selected) {
     const ok=state.selected===bird.name;
     const noteText=bird.note||'<em style="color:#9b9890">Loading field note...</em>';
-    const wrongMsg=ok?'':`<div class="wrong-note"><p>&#128204; -2 points. This one will come back after a few birds.</p></div>`;
+    const wrongMsg=ok?'':`<div class="wrong-note"><p>-2 points. This one will come back after a few birds.</p></div>`;
     fieldNote=`
       <div class="field-note">
         <div class="fn-head">
@@ -1173,9 +1163,9 @@ function renderQuiz(app) {
           ${bird.localName?`<div class="fn-species-samoan">${bird.localName}</div>`:''}
           <div class="fn-species-latin">${bird.latin||''}</div>
         </div>
-        <div class="fn-label">&#128269; HOW TO IDENTIFY</div>
+        <div class="fn-label">${icon('search',{size:12})} HOW TO IDENTIFY</div>
         <p class="fn-main">${noteText}</p>
-        ${bird.count?`<p class="fn-count">&#128202; ${bird.count.toLocaleString()} iNat obs in area</p>`:''}
+        ${bird.count?`<p class="fn-count">${bird.count.toLocaleString()} iNat obs in area</p>`:''}
         <p class="inat-credit" style="margin-top:6px">
           <a href="https://www.inaturalist.org/taxa/search?q=${encodeURIComponent(bird.name)}" target="_blank">Photo: iNaturalist</a> - CC licensed &nbsp;|&nbsp;
           <a href="https://www.gbif.org/species/search?q=${encodeURIComponent(bird.latin||bird.name)}" target="_blank">Location data: GBIF</a>
@@ -1193,13 +1183,13 @@ function renderQuiz(app) {
   const audioRecAvailable = audioLatin ? xenoCantoCache[audioLatin] : null;
   if (audioRecAvailable) {
     if (!isAudioMode()) {
-      const icon = state.audioPlaying ? '&#9208;&#65039;' : '&#128266;';
+      const audioIcon = state.audioPlaying ? icon('pause',{size:16}) : icon('volume',{size:16});
       const hasMultiple = xenoCantoCache[audioLatin]?.length > 1;
-      const nextBtn = hasMultiple ? `<button class="audio-btn" onclick="nextAudio()" title="Different recording" aria-label="Next recording" style="margin-left:4px;font-size:0.75rem;">&#8635;</button>` : '';
-      audioBtnHtml = `<button class="audio-btn${state.audioPlaying?' playing':''}" onclick="toggleAudio()" title="${state.audioPlaying?'Stop call':'Play call'}" aria-label="Play bird call">${icon}</button>${nextBtn}`;
+      const nextBtn = hasMultiple ? `<button class="audio-btn" onclick="nextAudio()" title="Different recording" aria-label="Next recording" style="margin-left:4px;">${icon('refresh',{size:15})}</button>` : '';
+      audioBtnHtml = `<button class="audio-btn${state.audioPlaying?' playing':''}" onclick="toggleAudio()" title="${state.audioPlaying?'Stop call':'Play call'}" aria-label="Play bird call">${audioIcon}</button>${nextBtn}`;
     }
     const displayRec = state.audioRec || audioRecAvailable[0];
-    audioCreditHtml = `<p class="audio-credit">&#127925; Recording by <a href="${displayRec.url}" target="_blank">${displayRec.recordist}</a> via <a href="https://xeno-canto.org" target="_blank">xeno-canto.org</a></p>`;
+    audioCreditHtml = `<p class="audio-credit">${icon('volume',{size:12})} Recording by <a href="${displayRec.url}" target="_blank">${displayRec.recordist}</a> via <a href="https://xeno-canto.org" target="_blank">xeno-canto.org</a></p>`;
   }
 
   app.innerHTML = `
@@ -1212,10 +1202,10 @@ function renderQuiz(app) {
       </div>
       <div class="streak-row">
         <div class="streak-dots">${dots}</div>
-        <span class="streak-label">&#128293; ${state.streak}/${STREAK_TARGET}</span>
+        <span class="streak-label">${state.streak}/${STREAK_TARGET}</span>
       </div>
       <div class="img-box${isAudioMode()?' img-box-audio':''}" id="imgBox" ontouchstart="_swipeX=event.touches[0].clientX" ontouchend="if(Math.abs(event.changedTouches[0].clientX-_swipeX)>40){event.changedTouches[0].clientX<_swipeX?nextPhoto():prevPhoto()}">${imgContent}${overlay}${carousel}</div>
-      <p class="question-text">${isAudioMode() ? '&#128266; Which bird is calling?' : '&#128269; Which bird is this?'}${audioBtnHtml}</p>
+      <p class="question-text">${isAudioMode() ? `${icon('volume',{size:15})} Which bird is calling?` : `${icon('search',{size:15})} Which bird is this?`}${audioBtnHtml}</p>
       ${audioCreditHtml}
       <div class="options">${optionsHtml}</div>
       ${fieldNote}
@@ -1269,13 +1259,13 @@ function renderSpeciesList(app, header, sortMode) {
   }).join('');
 
   const sortLabel = _spSortMode === 'taxonomy' ? 'taxonomic order' : 'observation count';
-  const toggleLabel = _spSortMode === 'taxonomy' ? '&#128202; Sort by count' : '&#128218; Sort by taxonomy';
+  const toggleLabel = _spSortMode === 'taxonomy' ? 'Sort by count' : 'Sort by taxonomy';
 
   app.innerHTML = _spHeader + `
     <div class="fade">
       <button class="btn-secondary" style="margin-bottom:12px" onclick="goIntro()">&#8592; Back</button>
       <div class="info-box" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
-        <p style="margin:0">&#128203; <strong>${birds.length} species</strong> - sorted by ${sortLabel}.</p>
+        <p style="margin:0">${icon('list',{size:14})} <strong>${birds.length} species</strong> - sorted by ${sortLabel}.</p>
         <button class="btn-sort-toggle" onclick="renderSpeciesList(document.getElementById('app'),null,_spSortMode==='taxonomy'?'count':'taxonomy')">${toggleLabel}</button>
       </div>
       ${rows}
@@ -1297,8 +1287,8 @@ async function toggleSpDetail(id, btn) {
   const taxaPhoto = decodeURIComponent(btn.dataset.photo || '');
   panel.innerHTML = `<div class="sp-id-loading">Loading...</div>`;
 
-  // Fetch observation photos, ID note, and a bird call recording in parallel; taxa photo is already available
-  const [obsPhotos, noteText, xcRec] = await Promise.all([
+  // Fetch observation photos, ID note, and a call recording in parallel; taxa photo is already available
+  const [obsPhotos, noteText] = await Promise.all([
     fetchInatPhotosByTaxon(inatId, latin),
     wikiUrl ? fetchIDNote(wikiUrl) : Promise.resolve(null),
     fetchXenoCanto(latin),
@@ -1323,14 +1313,15 @@ async function toggleSpDetail(id, btn) {
   }
 
   const noteHtml = noteText
-    ? `<div class="sp-id-label">&#128269; How to identify</div><p class="sp-id-text">${noteText}</p>`
-    : `<div class="sp-id-label">&#128269; How to identify</div><p class="sp-id-loading">No identification notes available.</p>`;
+    ? `<div class="sp-id-label">${icon('search',{size:13})} How to identify</div><p class="sp-id-text">${noteText}</p>`
+    : `<div class="sp-id-label">${icon('search',{size:13})} How to identify</div><p class="sp-id-loading">No identification notes available.</p>`;
 
+  const xcRec = xenoCantoCache[latin]?.[0];
   const audioHtml = xcRec
     ? `<div class="sp-audio-block">
-        <div class="sp-id-label">&#128266; Bird call</div>
+        <div class="sp-id-label">${icon('volume',{size:13})} Bird call</div>
         <audio controls preload="none" src="${xcRec.file}"></audio>
-        <div class="sp-audio-credit">Recording: ${xcRec.recordist} · <a href="${xcRec.url}" target="_blank">Xeno-canto</a></div>
+        <div class="sp-audio-credit">Recording: ${xcRec.recordist} &middot; <a href="${xcRec.url}" target="_blank">Xeno-canto</a></div>
       </div>`
     : '';
 
@@ -1392,7 +1383,7 @@ function renderAbout(app, header) {
         <p class="fn-main"><strong>Species lists</strong> come from GBIF occurrence data (which includes eBird), filtered to the last 15 years and ordered by observation count. This means you see the birds people actually encounter, not historical-only records. iNaturalist is used as a fallback for places where GBIF has insufficient coverage.</p>
         <p class="fn-main" style="margin-top:8px"><strong>Photos</strong> come from iNaturalist research-grade observations, fetched by exact taxon ID and sorted by community faves. One photo per observation is used to avoid repetitive shots of the same individual. The carousel shows up to 5 photos per species from different observers — swipe left or right to browse.</p>
         <p class="fn-main" style="margin-top:8px"><strong>Field notes</strong> are pulled from the Wikipedia article for each species — specifically the identification or description section rather than the intro, which tends to be general facts rather than ID tips.</p>
-        <p class="fn-main" style="margin-top:8px"><strong>Bird calls</strong> are streamed from Xeno-canto, filtered to quality A and B recordings under 10 seconds. Tap 🔊 to hear a call, ↻ to cycle to a different recording. Attribution is shown for every recording.</p>
+        <p class="fn-main" style="margin-top:8px"><strong>Bird calls</strong> are streamed from Xeno-canto, filtered to quality A and B recordings under 10 seconds. Tap ${icon('volume',{size:14})} to hear a call, ${icon('refresh',{size:14})} to cycle to a different recording. Attribution is shown for every recording.</p>
       </div>
 
       <div class="field-note" style="margin-bottom:12px">
@@ -1459,7 +1450,7 @@ function adjustImgPosition(img) {
 }
 function imgFailed() {
   const box=document.getElementById('imgBox');
-  if(box) box.innerHTML=`<div class="img-placeholder"><div class="icon">&#128247;</div><span>No photo available</span></div>`;
+  if(box) box.innerHTML=`<div class="img-placeholder"><div class="icon">${icon('camera',{size:40})}</div><span>No photo available</span></div>`;
 }
 let _photoSliding = false;
 function slidePhoto(newIdx, dir) {
@@ -1691,8 +1682,8 @@ async function loadLeaderboard(scrollTo = false) {
         : `coord_${CFG.coordLat.toFixed(3)}_${CFG.coordLng.toFixed(3)}_${key}${suffix}`;
       const entries = (data.boards?.[lbKey] || []).slice(0, 10);
       if (!entries.length) continue;
-      const boardLabel = suffix ? `${label} &#128266;` : label;
-      html += `<div style="margin-bottom:14px"><div class="lb-title" style="margin-bottom:6px">&#127942; ${boardLabel}</div>` +
+      const boardLabel = suffix ? `${label} ${icon('volume',{size:12})}` : label;
+      html += `<div style="margin-bottom:14px"><div class="lb-title" style="margin-bottom:6px">${icon('award',{size:14})} ${boardLabel}</div>` +
         entries.map((e, i) => `<div class="lb-row-item">
           <span class="lb-rank">${i + 1}</span>
           <span class="lb-name">${e.name}</span>
@@ -1922,7 +1913,7 @@ function initEngine(config) {
   // Footer bar
   const footer = document.createElement('div');
   footer.className = 'footer-bar';
-  footer.innerHTML = `<a href="${CFG.backUrl}" style="color:#2a7a58;font-weight:700;">WhatDatBird?</a> - by <a href="https://www.rutherfordecology.co.nz/" target="_blank" style="color:#9b9890;">Rutherford Ecology</a> - <a href="https://buymeacoffee.com/rutherfordecology" target="_blank" style="color:#d4a84b;font-weight:700;">&#x2615; Buy me a coffee</a> <span style="opacity:0.4;font-size:0.75em">${APP_VERSION}</span>`;
+  footer.innerHTML = `<a href="${CFG.backUrl}" style="color:#2a7a58;font-weight:700;">WhatDatBird?</a> - by <a href="https://www.rutherfordecology.co.nz/" target="_blank" style="color:#9b9890;">Rutherford Ecology</a> - <a href="https://buymeacoffee.com/rutherfordecology" target="_blank" style="color:#d4a84b;font-weight:700;">${icon('coffee',{size:13})} Buy me a coffee</a> <span style="opacity:0.4;font-size:0.75em">${APP_VERSION}</span>`;
   document.body.appendChild(footer);
 
   render();
