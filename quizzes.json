@@ -627,6 +627,21 @@
       "lat": -27.4352,
       "lng": 153.15137,
       "added": "2026-06-29"
+    },
+    {
+      "name": "WhatDatBird? - Birds near Broome",
+      "continent": "Oceania",
+      "country": "Australia",
+      "description": "Birds near Broome",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-17.94991&lng=122.2447&place_name=Birds%20near%20Broome&country_code=AU",
+      "coord_lat": -17.94991,
+      "coord_lng": 122.2447,
+      "photo_taxon": "Milvus migrans",
+      "lat": -17.94991,
+      "lng": 122.2447,
+      "added": "2026-07-03"
     }
   ]
 }
