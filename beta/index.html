@@ -14,11 +14,13 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#084430">
 <link rel="apple-touch-icon" href="icon-192.png">
+<script src="icons.js"></script>
 <script>if('serviceWorker' in navigator) navigator.serviceWorker.register('/WhatDatBird/sw.js');</script>
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-HBJSECY37S"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-HBJSECY37S');</script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  svg[aria-hidden="true"] { vertical-align: middle; }
   html, body {
     min-height: 100vh; background: #f3f2ee;
     font-family: system-ui, -apple-system, sans-serif; color: #1c1b18;
@@ -152,7 +154,7 @@
   </div>
   <div class="topbar-right">
     <span class="topbar-re">by <a href="https://www.rutherfordecology.co.nz/" target="_blank"><strong>Rutherford</strong> ecology</a></span>
-    <a href="about.html" style="font-size:0.8rem;color:rgba(255,255,255,0.6);text-decoration:none;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.6)'">&#8505; About</a>
+    <a href="about.html" style="font-size:0.8rem;color:rgba(255,255,255,0.6);text-decoration:none;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.6)'"><span data-icon="info" data-icon-size="14" style="vertical-align:-2px"></span> About</a>
   </div>
 </div>
 
@@ -180,7 +182,7 @@
   Location data: <a href="https://www.gbif.org" target="_blank">GBIF</a> -
   <a href="https://www.rutherfordecology.co.nz/" target="_blank">Rutherford Ecology</a>
   <br><br>
-  <a href="https://buymeacoffee.com/rutherfordecology" target="_blank" style="color:#d4a84b;font-weight:700;text-decoration:none;">&#x2615; Buy me a coffee</a>
+  <a href="https://buymeacoffee.com/rutherfordecology" target="_blank" style="color:#d4a84b;font-weight:700;text-decoration:none;"><span data-icon="coffee" data-icon-size="15" style="vertical-align:-3px"></span> Buy me a coffee</a>
 </footer>
 
 <script>
@@ -269,7 +271,7 @@ async function loadLibrary() {
     function cardHtml(q) {
       const isAudio = /mode=audio/.test(q.url);
       const count = q.species ? `<span class="card-count">${q.species} species</span>` : '';
-      const audioTag = isAudio ? `<span class="card-audio-tag">&#128266; Audio</span>` : '';
+      const audioTag = isAudio ? `<span class="card-audio-tag">${icon('volume',{size:13})} Audio</span>` : '';
       const imgId = `card-img-${q.place_id || q.url.replace(/\W/g,'')}`;
       const shareIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`;
       const absUrl = q.url.startsWith('http') ? q.url : `https://rutherfordecology.github.io/WhatDatBird/${q.url}`;
@@ -277,11 +279,11 @@ async function loadLibrary() {
       const safeName = q.name.replace(/'/g,"\\'");
       const adminBtns = ADMIN_MODE ? `
         <div class="admin-btns" onclick="event.preventDefault();event.stopPropagation();">
-          <button class="admin-btn admin-rename" onclick="adminRename('${safeUrl}')" title="Rename">&#9998;</button>
-          <button class="admin-btn admin-delete" onclick="adminDelete('${safeUrl}')" title="Delete">&#x1F5D1;</button>
+          <button class="admin-btn admin-rename" onclick="adminRename('${safeUrl}')" title="Rename">${icon('edit',{size:15})}</button>
+          <button class="admin-btn admin-delete" onclick="adminDelete('${safeUrl}')" title="Delete">${icon('trash',{size:15})}</button>
         </div>` : '';
       return `<a class="place-card" href="${q.url}">
-        <div class="card-img" id="${imgId}"><div class="card-img-ph">&#x1F426;</div></div>
+        <div class="card-img" id="${imgId}"><div class="card-img-ph">${icon('bird',{size:40})}</div></div>
         <div class="card-body">
           <div class="card-name">${q.name.replace('WhatDatBird? - ','')}</div>
           <div class="card-sub">${q.description}</div>
@@ -522,7 +524,7 @@ function selectNomResult(i) {
   placesEl.innerHTML = `
     <div class="map-place-item" onclick="goBbox()">
       <div>
-        <div class="map-place-name">&#x2b50; ${shortName}</div>
+        <div class="map-place-name">${icon('star',{size:14})} ${shortName}</div>
         <div class="map-place-type">${p.type || p.class || ''}</div>
       </div>
       <span class="map-place-go">Make a Quiz &#8594;</span>
@@ -580,7 +582,7 @@ function renderPlaceList(places, coordOption) {
   const coordHtml = coordOption ? `
     <div class="map-place-item map-place-coord" data-lat="${coordOption._lat}" data-lng="${coordOption._lng}" data-name="${coordOption.display_name}" data-cc="${coordOption._countryCode || ''}">
       <div>
-        <div class="map-place-name">&#x1F4CD; ${coordOption.display_name}</div>
+        <div class="map-place-name">${icon('map-pin',{size:14})} ${coordOption.display_name}</div>
         <div class="map-place-type" id="coordSubtitle">Starting ~100m · expands until 25+ species found</div>
       </div>
       <span class="map-place-go">Let&#x2019;s Go &#8594;</span>
