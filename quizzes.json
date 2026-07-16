@@ -657,6 +657,20 @@
       "lat": 52.63145,
       "lng": -2.1595,
       "added": "2026-07-16"
+    },
+    {
+      "name": "WhatDatBird? - Local to Christchurch",
+      "continent": "Other",
+      "country": "Local to Christchurch",
+      "description": "Local to Christchurch",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?place_id=122548&place_name=Local%20to%20Christchurch",
+      "place_id": 122548,
+      "photo_taxon": "Tadorna variegata",
+      "lat": -43.5159116946,
+      "lng": 172.5538447331,
+      "added": "2026-07-16"
     }
   ]
 }
