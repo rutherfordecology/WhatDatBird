@@ -642,6 +642,21 @@
       "lat": -17.94991,
       "lng": 122.2447,
       "added": "2026-07-03"
+    },
+    {
+      "name": "WhatDatBird? - Birds near South Staffordshire",
+      "continent": "Europe",
+      "country": "United Kingdom",
+      "description": "Birds near South Staffordshire",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=52.63145&lng=-2.1595&place_name=Birds%20near%20South%20Staffordshire&country_code=GB",
+      "coord_lat": 52.63145,
+      "coord_lng": -2.1595,
+      "photo_taxon": "Anas platyrhynchos",
+      "lat": 52.63145,
+      "lng": -2.1595,
+      "added": "2026-07-16"
     }
   ]
 }
