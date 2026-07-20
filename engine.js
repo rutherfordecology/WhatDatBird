@@ -843,14 +843,15 @@ function render() {
   renderQuiz(app);
 }
 
-let introLbLoaded = false;
-async function toggleIntroLeaderboard() {
-  const panel = document.getElementById('introLbPanel');
-  if (!panel) return;
-  if (panel.style.display !== 'none') { panel.style.display = 'none'; return; }
-  panel.style.display = 'block';
-  if (introLbLoaded) return;
-  introLbLoaded = true;
+// Open state + fetched HTML are cached at module scope so they survive the
+// background re-renders that fire while bird data is still loading (quiz.html
+// calls render() as tiers arrive). Without this, an open panel gets rebuilt
+// as display:none and appears to "flash up then disappear".
+let introLbOpen = false;
+let introLbHtml = null;
+
+async function loadIntroLb(panel) {
+  if (introLbHtml !== null) { panel.innerHTML = introLbHtml; return; }
   panel.innerHTML = '<p style="text-align:center;color:#9b9890;font-size:0.85rem">Loading…</p>';
   try {
     const r = await fetch(`https://api.github.com/repos/${GH_REPO}/contents/${LB_FILE}`, {
@@ -874,10 +875,29 @@ async function toggleIntroLeaderboard() {
         </div>`).join('')}
       </div>`;
     }).join('');
-    panel.innerHTML = html || '<p style="text-align:center;color:#9b9890;font-size:0.85rem">No scores yet for this place.</p>';
+    introLbHtml = html || '<p style="text-align:center;color:#9b9890;font-size:0.85rem">No scores yet for this place.</p>';
+    panel.innerHTML = introLbHtml;
   } catch {
+    // Leave introLbHtml null so a later open retries the fetch.
     panel.innerHTML = '<p style="text-align:center;color:#9b9890;font-size:0.85rem">Could not load leaderboards.</p>';
   }
+}
+
+// Re-apply the cached open state after a render() rebuilds the intro DOM.
+function restoreIntroLb() {
+  const panel = document.getElementById('introLbPanel');
+  if (!panel || !introLbOpen) return;
+  panel.style.display = 'block';
+  loadIntroLb(panel);
+}
+
+function toggleIntroLeaderboard() {
+  const panel = document.getElementById('introLbPanel');
+  if (!panel) return;
+  introLbOpen = !introLbOpen;
+  if (!introLbOpen) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  loadIntroLb(panel);
 }
 
 function audioToggleHtml(modeKey) {
@@ -956,10 +976,11 @@ function renderIntro(app, header) {
     </div>
     <button class="btn-secondary" onclick="setState({phase:'species'})">${icon('list',{size:15})} Species List</button>
     <button class="btn-secondary" onclick="toggleIntroLeaderboard()">${icon('award',{size:15})} Leaderboards</button>
-    <div id="introLbPanel" style="display:none;margin-top:12px"></div>
+    <div id="introLbPanel" style="display:${introLbOpen?'block':'none'};margin-top:12px"></div>
     ${saveSectionHtml()}
     <button class="btn-back" onclick="setState({phase:'about'})">${icon('info',{size:15})} About WhatDatBird?</button>
     <button class="btn-back" onclick="window.location.href='${CFG.backUrl}'">&#8592; All Quizzes</button>`;
+  restoreIntroLb();
   if ((CFG.placeId || CFG.coordLat) && _inLibrary === null) checkInLibrary();
 }
 

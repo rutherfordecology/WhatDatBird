@@ -335,7 +335,7 @@ async function loadFromGBIF() {
     }
   }
 
-  if (!introShown) throw new Error('Could not find enough bird species with names.');
+  if (!introShown) throw new Error('Could not find enough bird records with names.');
 
   // Attach locale-based indigenous names (e.g. Māori for NZ) if available
   const locale = COUNTRY_CODE ? COUNTRY_LOCALE[COUNTRY_CODE] : null;
@@ -505,7 +505,7 @@ async function boot() {
         if (birds.length >= 8) { setTiers(birds); setState({ phase: 'intro' }); return; }
       } catch {}
     }
-    setState({ phase: 'error', loadError: 'Not enough bird species found for this location.' });
+    setState({ phase: 'error', loadError: 'Not enough bird records found for this location.' });
     return;
   }
 
@@ -569,7 +569,7 @@ async function boot() {
         if (birds.length >= 8) { setTiers(birds); setState({ phase: 'intro' }); return; }
       } catch {}
     }
-    setState({ phase: 'error', loadError: 'Not enough bird species found near this location — try a different spot.' });
+    setState({ phase: 'error', loadError: 'Not enough bird records found near this location — try a different spot.' });
     return;
   }
 
@@ -617,7 +617,7 @@ async function boot() {
       if (buf > 0) setState({ buffer: buf });
       const birds = await loadFromInat(buf);
       if (birds.length >= MIN_SPECIES || buf === BUFFER_STEPS[BUFFER_STEPS.length - 1]) {
-        if (birds.length < 8) throw new Error('Not enough species data (need at least 8).');
+        if (birds.length < 8) throw new Error('Not enough bird records for this location (need at least 8 species).');
         setTiers(birds);
         setState({ phase: 'intro' });
         return;
