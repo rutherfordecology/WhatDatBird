@@ -671,6 +671,21 @@
       "lat": -43.5159116946,
       "lng": 172.5538447331,
       "added": "2026-07-16"
+    },
+    {
+      "name": "WhatDatBird? - table cape",
+      "continent": "Oceania",
+      "country": "New Zealand",
+      "description": "table cape",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-39.09738&lng=177.97462&place_name=table%20cape&country_code=NZ",
+      "coord_lat": -39.09738,
+      "coord_lng": 177.97462,
+      "photo_taxon": "Anarhynchus obscurus",
+      "lat": -39.09738,
+      "lng": 177.97462,
+      "added": "2026-07-31"
     }
   ]
 }
