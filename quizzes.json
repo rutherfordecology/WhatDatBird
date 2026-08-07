@@ -686,6 +686,21 @@
       "lat": -39.09738,
       "lng": 177.97462,
       "added": "2026-07-31"
+    },
+    {
+      "name": "WhatDatBird? - Birds near Nyanga",
+      "continent": "Africa",
+      "country": "Zimbabwe",
+      "description": "Birds near Nyanga",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-18.44126&lng=32.71239&place_name=Birds%20near%20Nyanga&country_code=ZW",
+      "coord_lat": -18.44126,
+      "coord_lng": 32.71239,
+      "photo_taxon": "Saxicola torquatus",
+      "lat": -18.44126,
+      "lng": 32.71239,
+      "added": "2026-08-07"
     }
   ]
 }
