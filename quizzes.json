@@ -701,6 +701,21 @@
       "lat": -18.44126,
       "lng": 32.71239,
       "added": "2026-08-07"
+    },
+    {
+      "name": "WhatDatBird? - Birds near Mārahau",
+      "continent": "Oceania",
+      "country": "New Zealand",
+      "description": "Birds near Mārahau",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-41.01231&lng=172.99656&place_name=Birds%20near%20M%C4%81rahau&country_code=NZ",
+      "coord_lat": -41.01231,
+      "coord_lng": 172.99656,
+      "photo_taxon": "Gallirallus australis",
+      "lat": -41.01231,
+      "lng": 172.99656,
+      "added": "2026-09-10"
     }
   ]
 }
