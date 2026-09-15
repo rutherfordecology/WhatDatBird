@@ -731,6 +731,21 @@
       "lat": -45.85716,
       "lng": 170.50997,
       "added": "2026-09-15"
+    },
+    {
+      "name": "WhatDatBird? - Birds near this location",
+      "continent": "Other",
+      "country": "Birds near this location",
+      "description": "Birds near this location",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=20.36229&lng=167.93937&place_name=Birds%20near%20this%20location",
+      "coord_lat": 20.36229,
+      "coord_lng": 167.93937,
+      "photo_taxon": null,
+      "lat": 20.36229,
+      "lng": 167.93937,
+      "added": "2026-09-15"
     }
   ]
 }
