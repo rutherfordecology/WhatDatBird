@@ -716,6 +716,21 @@
       "lat": -41.01231,
       "lng": 172.99656,
       "added": "2026-09-10"
+    },
+    {
+      "name": "WhatDatBird? - Birds near Dunedin",
+      "continent": "Oceania",
+      "country": "New Zealand",
+      "description": "Birds near Dunedin",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-45.85716&lng=170.50997&place_name=Birds%20near%20Dunedin&country_code=NZ",
+      "coord_lat": -45.85716,
+      "coord_lng": 170.50997,
+      "photo_taxon": "Hemiphaga novaeseelandiae",
+      "lat": -45.85716,
+      "lng": 170.50997,
+      "added": "2026-09-15"
     }
   ]
 }
