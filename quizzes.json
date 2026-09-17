@@ -761,6 +761,21 @@
       "lat": -46.89465,
       "lng": 168.12897,
       "added": "2026-09-17"
+    },
+    {
+      "name": "WhatDatBird? - Birds near Poconé",
+      "continent": "South America",
+      "country": "Brazil",
+      "description": "Birds near Poconé",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-17.03106&lng=-56.64809&place_name=Birds%20near%20Pocon%C3%A9&country_code=BR",
+      "coord_lat": -17.03106,
+      "coord_lng": -56.64809,
+      "photo_taxon": "Ardea cocoi",
+      "lat": -17.03106,
+      "lng": -56.64809,
+      "added": "2026-09-17"
     }
   ]
 }
