@@ -776,6 +776,21 @@
       "lat": -17.03106,
       "lng": -56.64809,
       "added": "2026-09-17"
+    },
+    {
+      "name": "WhatDatBird? - Birds near Eastwoodhill Arboretum",
+      "continent": "Oceania",
+      "country": "New Zealand",
+      "description": "Birds near Eastwoodhill Arboretum",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-38.55988&lng=177.71587&place_name=Birds%20near%20Eastwoodhill%20Arboretum&country_code=NZ",
+      "coord_lat": -38.55988,
+      "coord_lng": 177.71587,
+      "photo_taxon": "Hemiphaga novaeseelandiae",
+      "lat": -38.55988,
+      "lng": 177.71587,
+      "added": "2026-09-27"
     }
   ]
 }
