@@ -791,6 +791,20 @@
       "lat": -38.55988,
       "lng": 177.71587,
       "added": "2026-09-27"
+    },
+    {
+      "name": "WhatDatBird? - Auckland Region2, NZ",
+      "continent": "Other",
+      "country": "Auckland Region2, NZ",
+      "description": "Auckland Region2, NZ",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?place_id=117600&place_name=Auckland%20Region2%2C%20NZ",
+      "place_id": 117600,
+      "photo_taxon": null,
+      "lat": null,
+      "lng": null,
+      "added": "2026-09-29"
     }
   ]
 }
