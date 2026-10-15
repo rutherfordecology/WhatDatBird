@@ -805,6 +805,21 @@
       "lat": null,
       "lng": null,
       "added": "2026-09-29"
+    },
+    {
+      "name": "WhatDatBird? - Birds near Stewart Island / Rakiura Community",
+      "continent": "Oceania",
+      "country": "New Zealand",
+      "description": "Birds near Stewart Island / Rakiura Community",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-46.83517&lng=168.08475&place_name=Birds%20near%20Stewart%20Island%20%2F%20Rakiura%20Community&country_code=NZ",
+      "coord_lat": -46.83517,
+      "coord_lng": 168.08475,
+      "photo_taxon": "Petroica australis",
+      "lat": -46.83517,
+      "lng": 168.08475,
+      "added": "2026-10-15"
     }
   ]
 }
