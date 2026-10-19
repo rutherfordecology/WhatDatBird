@@ -820,6 +820,21 @@
       "lat": -46.83517,
       "lng": 168.08475,
       "added": "2026-10-15"
+    },
+    {
+      "name": "WhatDatBird? - Birds near Queenstown-Lakes District",
+      "continent": "Oceania",
+      "country": "New Zealand",
+      "description": "Birds near Queenstown-Lakes District",
+      "species": null,
+      "type": "dynamic",
+      "url": "quiz.html?lat=-44.85189&lng=168.19163&place_name=Birds%20near%20Queenstown-Lakes%20District&country_code=NZ",
+      "coord_lat": -44.85189,
+      "coord_lng": 168.19163,
+      "photo_taxon": "Nestor notabilis",
+      "lat": -44.85189,
+      "lng": 168.19163,
+      "added": "2026-10-19"
     }
   ]
 }
